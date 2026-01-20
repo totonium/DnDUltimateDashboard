@@ -1,16 +1,29 @@
 package com.totonium.dto;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 
 public interface Creature {
-    public int getInitiative();
-    public void setInitiative(int initiative);
-    public String getName();
-    public void setName(String name);
-    public int getAC();
-    public void setAC(int AC);
-    public int getHealth();
-    public void setHealth(int health);
-    public List<String> getStatusEffects();
-    public void setStatusEffects(List<String> statusEffects);
+    @Nullable
+    String getName();
+
+    void setName(String name);
+
+    int getInitiative();
+
+    void setInitiative(int initiative);
+
+    int getAC();
+
+    void setAC(int ac);
+
+    int getHealth();
+
+    void setHealth(int health);
+
+    @Nullable
+    List<String> getStatusEffects();
+
+    void setStatusEffects(@Nullable List<String> statusEffects);
 }

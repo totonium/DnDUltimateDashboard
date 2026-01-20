@@ -1,4 +1,4 @@
-# DnD Ultimate Dashboard - Implementation Plan v3.0
+# DnD Ultimate Dashboard - Implementation Plan
 
 **Last Updated:** 2026-01-18
 **Version:** 4.0 (Custom Backend Edition)
@@ -8,7 +8,7 @@
 ### Phase 1 - Foundation (In Progress)
 
 | Component | Status | Notes |
-|-----------|--------|-------|
+| --------- | ------ | ----- |
 | Project Setup | ✅ Complete | Vite + React 19, dependencies installed |
 | Vite PWA Config | ✅ Complete | Manifest, service workers, offline caching |
 | Dexie.js Database | ✅ Complete | Schema for all modules |
@@ -19,8 +19,8 @@
 
 ### Next Steps (Phase 1 Continued)
 
-- [ ] Test dev server
-- [ ] Create backend API template
+- [X] Test dev server
+- [X] Create backend API template
 - [ ] Create .env.example file
 - [ ] Add environment type declarations
 - [ ] Set up Spring Boot project
@@ -70,7 +70,7 @@ This document outlines a comprehensive implementation plan for a **DnD Ultimate 
 ### Key Characteristics
 
 | Aspect | Details |
-|--------|---------|
+| ------ | ------- |
 | **User Model** | Single user (personal), no multiplayer |
 | **Platform** | Browser-based (desktop, tablet, mobile) |
 | **Network** | Offline-first with cloud backup |
@@ -97,7 +97,7 @@ This document outlines a comprehensive implementation plan for a **DnD Ultimate 
 ### 1.1 Backend Stack
 
 | Layer | Technology | Justification |
-|-------|------------|---------------|
+| ----- | ---------- | ------------- |
 | **Framework** | Spring Boot 3.x | Modern Java, excellent ecosystem |
 | **Language** | Java 17+ | LTS, strong typing |
 | **Database** | PostgreSQL | Robust, feature-rich, free |
@@ -109,7 +109,7 @@ This document outlines a comprehensive implementation plan for a **DnD Ultimate 
 ### 1.2 Frontend Stack
 
 | Layer | Technology | Justification |
-|-------|------------|---------------|
+| ----- | ---------- | ------------- |
 | **Framework** | React 19 + Vite | Already configured; excellent performance |
 | **Language** | JavaScript (ES Modules) | Simpler than TypeScript for this scope |
 | **State Management** | Zustand | Lightweight (2KB), simple API, persistence support |
@@ -125,6 +125,7 @@ This document outlines a comprehensive implementation plan for a **DnD Ultimate 
 ### 1.3 Dependencies
 
 **Backend (pom.xml):**
+
 ```xml
 <dependencies>
     <dependency>
@@ -166,6 +167,7 @@ This document outlines a comprehensive implementation plan for a **DnD Ultimate 
 ```
 
 **Frontend (package.json):**
+
 ```json
 {
   "dependencies": {
@@ -240,39 +242,39 @@ app:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Data Storage Layers                        │
+│                    Data Storage Layers                      │
 ├─────────────────────────────────────────────────────────────┤
-│  POSTGRESQL DATABASE (Primary Source of Truth)               │
-│  ├── users/                                                  │
+│  POSTGRESQL DATABASE (Primary Source of Truth)              │
+│  ├── users/                                                 │
 │  │   ├── settings                                           │
 │  │   ├── encounters                                         │
 │  │   ├── combatants                                         │
 │  │   ├── statblocks                                         │
 │  │   ├── audio_tracks                                       │
 │  │   └── playlists                                          │
-│  └── campaign_data/                                          │
-│      ├── npcs                                                │
-│      ├── locations                                           │
-│      └── plot_threads                                        │
+│  └── campaign_data/                                         │
+│      ├── npcs                                               │
+│      ├── locations                                          │
+│      └── plot_threads                                       │
 ├─────────────────────────────────────────────────────────────┤
-│  REDIS CACHE (API Response Cache)                            │
-│  ├── srd_statblocks:{hash}                                   │
-│  ├── api_responses:{endpoint}                                │
-│  └── session:{userId}                                        │
+│  REDIS CACHE (API Response Cache)                           │
+│  ├── srd_statblocks:{hash}                                  │
+│  ├── api_responses:{endpoint}                               │
+│  └── session:{userId}                                       │
 ├─────────────────────────────────────────────────────────────┤
-│  LOCAL CACHE (Dexie.js / IndexedDB)                          │
-│  ├── Encounters (read/write cache)                           │
-│  ├── Combatants (read/write cache)                           │
-│  ├── Statblocks (read cache + local imports)                 │
-│  ├── Audio file blobs                                        │
-│  ├── Obsidian vault index                                    │
-│  ├── JWT token                                               │
-│  └── Settings                                                │
+│  LOCAL CACHE (Dexie.js / IndexedDB)                         │
+│  ├── Encounters (read/write cache)                          │
+│  ├── Combatants (read/write cache)                          │
+│  ├── Statblocks (read cache + local imports)                │
+│  ├── Audio file blobs                                       │
+│  ├── Obsidian vault index                                   │
+│  ├── JWT token                                              │
+│  └── Settings                                               │
 ├─────────────────────────────────────────────────────────────┤
-│  PWA SERVICE WORKER                                          │
-│  ├── Static assets (JS, CSS, fonts)                          │
-│  ├── Audio presets (built-in)                                │
-│  └── App shell                                               │
+│  PWA SERVICE WORKER                                         │
+│  ├── Static assets (JS, CSS, fonts)                         │
+│  ├── Audio presets (built-in)                               │
+│  └── App shell                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -987,7 +989,7 @@ backend/
 ### 6.2 API Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+| ------ | -------- | ----------- |
 | **Auth** | | |
 | POST | /api/auth/register | Register new user |
 | POST | /api/auth/login | Login and get JWT |
@@ -1479,7 +1481,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 ### 12.1 Performance Targets
 
 | Metric | Target | Measurement |
-|--------|--------|-------------|
+| ------ | ------ | ----------- |
 | First Contentful Paint | < 1.5s | Lighthouse |
 | Time to Interactive | < 3s | Lighthouse |
 | API Response Time (P95) | < 200ms | Backend metrics |
@@ -1489,7 +1491,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 ### 12.2 Backend Performance Targets
 
 | Metric | Target |
-|--------|--------|
+| ------ | ------ |
 | CPU Usage (avg) | < 30% |
 | Memory Usage | < 512MB |
 | DB Connection Pool | 10-20 connections |
