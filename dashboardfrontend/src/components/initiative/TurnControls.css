@@ -1,0 +1,80 @@
+/* Turn Controls Styles */
+@import '../../../styles.css';
+
+.turn-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  gap: var(--space-4);
+}
+
+.turn-info {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.round-display,
+.turn-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.round-label,
+.turn-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.round-value,
+.turn-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+}
+
+.turn-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.control-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--color-secondary);
+}
+
+.control-btn.primary {
+  background: var(--color-secondary);
+  color: var(--bg-primary);
+  border-color: var(--color-secondary);
+}
+
+.control-btn.primary:hover:not(:disabled) {
+  background: var(--color-secondary-dark);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.turn-extras {
+  display: flex;
+  gap: var(--space-2);
+}

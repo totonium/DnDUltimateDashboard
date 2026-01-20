@@ -1,0 +1,33 @@
+/* Initiative Tracker Styles */
+@import '../../../styles.css';
+
+.initiative-tracker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  height: 100%;
+}
+
+.initiative-tracker.sidebar-closed {
+  margin-left: 0;
+}
+
+.tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+  gap: var(--space-2);
+}
+
+.tracker-header h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.tracker-actions {
+  display: flex;
+  gap: var(--space-2);
+}

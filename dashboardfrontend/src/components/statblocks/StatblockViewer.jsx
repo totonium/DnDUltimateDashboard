@@ -1,0 +1,281 @@
+/**
+ * Statblock Viewer Component
+ * Full statblock display with all details
+ *
+ * @module components/statblocks/StatblockViewer
+ */
+
+import { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Edit, Copy, Trash2, Plus } from 'lucide-react';
+import { useStatblockStore } from '../../stores/statblocks';
+import './StatblockViewer.css';
+
+/**
+ * StatblockViewer - Full statblock display component
+ */
+export function StatblockViewer({ statblock, onClose, onEdit }) {
+  const [expandedSections, setExpandedSections] = useState({
+    abilities: true,
+    actions: true,
+    reactions: false,
+    legendary: false
+  });
+
+  const { deleteStatblock, duplicateStatblock } = useStatblockStore();
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm(`Delete "${statblock.name}"?`)) {
+      await deleteStatblock(statblock.id);
+      onClose();
+    }
+  };
+
+  const handleDuplicate = async () => {
+    await duplicateStatblock(statblock.id);
+  };
+
+  const formatAbilityScore = (score) => {
+    const mod = Math.floor((score - 10) / 2);
+    return {
+      score,
+      modifier: mod >= 0 ? `+${mod}` : mod
+    };
+  };
+
+  return (
+    <div className="statblock-viewer-overlay" onClick={onClose}>
+      <div className="statblock-viewer" onClick={e => e.stopPropagation()}>
+        <header className="viewer-header">
+          <div className="header-main">
+            <h1 className="statblock-title">{statblock.name}</h1>
+            <div className="statblock-subtitle">
+              {statblock.size && <span>{statblock.size}</span>}
+              {statblock.type && <span>{statblock.type}</span>}
+              {statblock.alignment && <span>{statblock.alignment}</span>}
+            </div>
+          </div>
+          <div className="header-actions">
+            <button className="icon-btn" onClick={handleDuplicate} title="Duplicate">
+              <Copy size={18} />
+            </button>
+            <button className="icon-btn danger" onClick={handleDelete} title="Delete">
+              <Trash2 size={18} />
+            </button>
+            <button className="close-btn" onClick={onClose}>
+              <X size={24} />
+            </button>
+          </div>
+        </header>
+
+        {/* Core Stats */}
+        <div className="core-stats">
+          <div className="stat-box">
+            <span className="stat-label">Armor Class</span>
+            <span className="stat-value">{statblock.ac}</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Hit Points</span>
+            <span className="stat-value">{statblock.hp}</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Speed</span>
+            <span className="stat-value">
+              {statblock.speed ? Object.entries(statblock.speed)
+                .map(([k, v]) => `${v} ft. ${k}`)
+                .join(', ') : '30 ft.'}
+            </span>
+          </div>
+        </div>
+
+        {/* Ability Scores */}
+        <div className="ability-scores">
+          {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => {
+            const { score, modifier } = formatAbilityScore(statblock.abilities?.[ability] || 10);
+            return (
+              <div key={ability} className="ability-box">
+                <span className="ability-name">{ability.toUpperCase()}</span>
+                <span className="ability-score">{score}</span>
+                <span className="ability-mod">{modifier}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Saving Throws */}
+        {statblock.savingThrows?.length > 0 && (
+          <div className="saving-throws">
+            <strong>Saving Throws: </strong>
+            {statblock.savingThrows.map((st, i) => (
+              <span key={i}>
+                {st.ability} {st.modifier >= 0 ? '+' : ''}{st.modifier}
+                {i < statblock.savingThrows.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Skills */}
+        {statblock.skills && Object.keys(statblock.skills).length > 0 && (
+          <div className="skills">
+            <strong>Skills: </strong>
+            {Object.entries(statblock.skills).map(([skill, mod], i) => (
+              <span key={skill}>
+                {skill} {mod >= 0 ? '+' : ''}{mod}
+                {i < Object.keys(statblock.skills).length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Senses */}
+        {statblock.senses && Object.keys(statblock.senses).length > 0 && (
+          <div className="senses">
+            <strong>Senses: </strong>
+            {Object.entries(statblock.senses).map(([sense, value]) => (
+              <span key={sense}>
+                {sense} {value} ft.
+                {sense !== Object.keys(statblock.senses)[Object.keys(statblock.senses).length - 1] ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Languages */}
+        {statblock.languages?.length > 0 && (
+          <div className="languages">
+            <strong>Languages: </strong>
+            {statblock.languages.join(', ')}
+          </div>
+        )}
+
+        {/* Challenge Rating */}
+        <div className="challenge-rating">
+          <strong>Challenge </strong>
+          <span>{statblock.challengeRating}</span>
+          {statblock.experiencePoints && (
+            <span className="xp">({statblock.experiencePoints} XP)</span>
+          )}
+        </div>
+
+        <hr className="divider" />
+
+        {/* Special Abilities */}
+        {statblock.abilities?.length > 0 && (
+          <Section
+            title="Special Abilities"
+            icon="⚡"
+            expanded={expandedSections.abilities}
+            onToggle={() => toggleSection('abilities')}
+          >
+            {statblock.abilities.map((ability, i) => (
+              <AbilityContent key={i} ability={ability} />
+            ))}
+          </Section>
+        )}
+
+        {/* Actions */}
+        {statblock.actions?.length > 0 && (
+          <Section
+            title="Actions"
+            icon="⚔️"
+            expanded={expandedSections.actions}
+            onToggle={() => toggleSection('actions')}
+          >
+            {statblock.actions.map((action, i) => (
+              <AbilityContent key={i} ability={action} />
+            ))}
+          </Section>
+        )}
+
+        {/* Reactions */}
+        {statblock.reactions?.length > 0 && (
+          <Section
+            title="Reactions"
+            icon="🛡️"
+            expanded={expandedSections.reactions}
+            onToggle={() => toggleSection('reactions')}
+          >
+            {statblock.reactions.map((reaction, i) => (
+              <AbilityContent key={i} ability={reaction} />
+            ))}
+          </Section>
+        )}
+
+        {/* Legendary Actions */}
+        {statblock.legendaryActions?.length > 0 && (
+          <Section
+            title="Legendary Actions"
+            icon="👑"
+            expanded={expandedSections.legendary}
+            onToggle={() => toggleSection('legendary')}
+          >
+            {statblock.legendaryActions.map((action, i) => (
+              <AbilityContent key={i} ability={action} />
+            ))}
+          </Section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Collapsible Section Component
+ */
+function Section({ title, icon, expanded, onToggle, children }) {
+  return (
+    <div className="statblock-section">
+      <button className="section-header" onClick={onToggle}>
+        <span className="section-icon">{icon}</span>
+        <span className="section-title">{title}</span>
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {expanded && <div className="section-content">{children}</div>}
+    </div>
+  );
+}
+
+/**
+ * Ability/Action Content Component
+ */
+function AbilityContent({ ability }) {
+  return (
+    <div className="ability-content">
+      <strong className="ability-name">{ability.name}.</strong>
+      <span className="ability-description">{ability.description}</span>
+      {ability.usage && (
+        <span className="ability-usage">
+          {' '}({formatUsage(ability.usage)})
+        </span>
+      )}
+    </div>
+  );
+}
+
+function formatUsage(usage) {
+  switch (usage.type) {
+    case 'recharge':
+      return `Recharge ${usage.value || '6'}`;
+    case 'perDay':
+      return `${usage.value}/day`;
+    case 'once':
+      return 'Once';
+    case 'shortRest':
+      return 'Short rest';
+    case 'longRest':
+      return 'Long rest';
+    case 'rechargeShort':
+      return 'Recharge after short or long rest';
+    default:
+      return '';
+  }
+}
+
+export default StatblockViewer;

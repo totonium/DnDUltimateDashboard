@@ -1,0 +1,234 @@
+/* Statblock Library Styles */
+@import '../../../styles.css';
+
+.statblock-library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  height: 100%;
+}
+
+.library-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+  gap: var(--space-2);
+}
+
+.library-header h1 {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.library-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 400px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.search-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.filter-toggle,
+.view-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.filter-toggle.active {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.view-toggle button {
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+}
+
+.view-toggle button.active {
+  color: var(--color-secondary);
+}
+
+.filter-panel {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filter-group label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.filter-group select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+}
+
+.library-stats {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.library-content.grid .statblock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.library-content.list .statblock-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.statblock-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.statblock-card:hover {
+  border-color: var(--color-secondary);
+}
+
+.statblock-card.selected {
+  border-color: var(--color-secondary);
+  background: var(--bg-tertiary);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.statblock-name {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.card-stats {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.card-stats .stat {
+  font-size: var(--text-sm);
+}
+
+.card-stats .stat strong {
+  color: var(--text-muted);
+  font-weight: var(--font-normal);
+}
+
+.card-detail {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.card-source {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.statblock-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.statblock-list-item:hover {
+  border-color: var(--color-secondary);
+}
+
+.statblock-list-item.selected {
+  background: var(--bg-tertiary);
+  border-color: var(--color-secondary);
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.item-main h3 {
+  margin: 0;
+}
+
+.item-stats {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
