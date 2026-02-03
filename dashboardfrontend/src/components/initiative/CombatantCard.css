@@ -6,23 +6,13 @@
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
-  cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
-}
-
-.combatant-card:hover {
-  border-color: var(--color-secondary);
 }
 
 .combatant-card.active-turn {
   border-color: var(--color-secondary);
   box-shadow: 0 0 15px rgba(255, 205, 38, 0.3);
-}
-
-.combatant-card.selected {
-  border-color: var(--color-secondary);
-  background: var(--bg-tertiary);
 }
 
 .combatant-card.healthy .hp-bar-fill {
@@ -56,6 +46,30 @@
 .initiative-value {
   font-size: var(--text-xl);
   font-weight: var(--font-bold);
+}
+
+.initiative-value.editable {
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+
+.initiative-value.editable:hover {
+  background-color: var(--bg-secondary);
+}
+
+.initiative-input {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  background: var(--bg-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  text-align: center;
+  width: 48px;
+  padding: 2px;
+  outline: none;
 }
 
 .initiative-label {
@@ -125,6 +139,7 @@
 .stat.hp {
   flex: 1;
   min-width: 100px;
+  gap: var(--space-2);
 }
 
 .hp-bar-container {
@@ -172,6 +187,7 @@
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  color: var(--text-primary);
 }
 
 .hp-btn:hover {
@@ -206,8 +222,13 @@
   padding: var(--space-1);
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-muted);
+}
+
+.expand-toggle:hover:not(:disabled) {
+  background: var(--bg-elevated);
 }
 
 .card-details {

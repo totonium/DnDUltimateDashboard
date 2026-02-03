@@ -8,15 +8,20 @@ npm run dev           # Dev server (port 3000)
 npm run build         # Production build (dist/)
 npm run lint          # ESLint (src --ext js,jsx --max-warnings 0)
 npm run preview       # Preview production build
+
+# Test commands (when implemented)
+npm run test              # Run all tests
+npm run test -- --watch   # Watch mode
+npm run coverage          # Coverage report
 ```
 
 ### Backend (dashboardbackend/)
 ```bash
 cd dashboardbackend && ../mvnw spring-boot:run   # Dev server (port 8080)
-../mvnw test                                      # Run all tests
-../mvnw test -Dtest=ClassName                     # Run single test class
-../mvnw test -Dtest=ClassName#methodName          # Run single test method
-../mvnw package -DskipTests                       # Build JAR
+../mvnw test                                    # Run all tests
+../mvnw test -Dtest=ClassName                   # Run single test class
+../mvnw test -Dtest=ClassName#methodName       # Run single test method
+../mvnw package -DskipTests                     # Build JAR
 ```
 
 ## Project Structure
@@ -25,38 +30,37 @@ cd dashboardbackend && ../mvnw spring-boot:run   # Dev server (port 8080)
 DnDUltimateDashboard/
 ├── dashboardfrontend/     # React 19 + Vite + Zustand + TanStack Router
 │   └── src/
-│       ├── components/    # Feature components (layout/, initiative/, etc.)
-│       ├── services/      # api.js, authService.js
-│       ├── stores/        # Zustand stores
-│       ├── hooks/         # Custom hooks
+│       ├── components/    # Feature components (layout/, statblocks/, initiative/, audio/)
+│       ├── services/      # Parsers, API clients (monsterParser.jsx, srdImporter.js)
+│       ├── stores/       # Zustand stores (auth, statblocks, initiative, ui)
+│       ├── hooks/        # Custom hooks
 │       ├── db/            # Dexie.js schema
-│       └── styles/        # CSS modules (variables.css, utilities.css, etc.)
+│       └── styles/        # CSS variables, utilities
 ├── dashboardbackend/      # Spring Boot 3.x + JPA + PostgreSQL
-│   └── src/main/java/com/totonium/
-│       ├── controller/    # REST endpoints
-│       ├── service/       # Business logic
-│       ├── repository/    # JPA repositories
-│       ├── entity/        # JPA entities
-│       ├── dto/           # Request/Response records
-│       ├── config/        # Security, CORS
-│       └── exception/     # Custom exceptions
-└── styles/                # Global CSS files
+└── styles/              # Global CSS files
 ```
 
-## Frontend Code Style
+## Code Style Guidelines
 
-### Imports Order
-React → external libs → internal modules → CSS
+### Imports Order (React files)
 ```jsx
 import { useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import clsx from 'clsx'
-import { Sword } from 'lucide-react'
 import { useStore } from '../../stores/store'
+import { helperFunc } from '../../services/helper'
 import './Component.css'
 ```
 
-### Components
+### Naming Conventions
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase | `StatblockViewer` |
+| Hooks | useXxx | `useAuth` |
+| Stores | useXxxStore | `useStatblockStore` |
+| Services/Files | camelCase or PascalCase | `monsterParser.jsx`, `authService.js` |
+| CSS Files | kebab-case | `statblock-viewer.css` |
+
+### Component Pattern
 ```jsx
 export function ComponentName({ prop1, prop2 }) {
   const { value } = useStore()
@@ -65,16 +69,7 @@ export function ComponentName({ prop1, prop2 }) {
 export default ComponentName
 ```
 
-### Naming Conventions
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | PascalCase | `InitiativeTracker` |
-| Hooks | useXxx | `useAuth` |
-| Stores | useXxxStore | `useInitiativeStore` |
-| Services | camelCase + Service | `authService` |
-| Files | kebab-case | `initiative-tracker.css` |
-
-### State (Zustand)
+### State Management (Zustand)
 ```javascript
 export const useStore = create(
   persist((set, get) => ({
@@ -90,105 +85,88 @@ export const useStore = create(
 
 ### CSS Variables (semantic naming only)
 ```css
-/* Colors */
 --color-primary, --color-secondary, --color-success, --color-error
-/* Backgrounds */
 --bg-primary, --bg-secondary, --bg-tertiary, --bg-card
-/* Text */
 --text-primary, --text-secondary, --text-muted
-/* Spacing */
 --space-1 through --space-8
-/* Other */
---radius-*, --shadow-*, --transition-*, --font-*
+--radius-*, --shadow-*, --transition-*
 ```
 
-### Use utility classes from styles/
-```jsx
-<div className="flex flex-col items-center gap-4 p-4">  // utility classes available
-```
+### Backend Patterns
+- **DTOs**: Use Java records (`public record XyzDTO(...)`)
+- **Entities**: Use UUID primary keys (no auto-increment Long)
+- **Validation**: `@Valid` on all `@RequestBody` parameters
+- **Exceptions**: Custom exceptions with `@RestControllerAdvice`
 
-## Backend Code Style
+## Development Guidelines
 
-### Package Structure
-```
-com.totonium/
-├── controller/  # REST endpoints (@RestController)
-├── service/     # Business logic (@Service, @Transactional)
-├── repository/  # JPA data access (JpaRepository)
-├── entity/      # JPA entities (@Entity)
-├── dto/         # Request/Response records
-├── config/      # Security, CORS
-├── exception/   # Custom exceptions + @RestControllerAdvice
-└── security/    # JWT, Auth
-```
+### Frontend
+1. Use functional components with hooks
+2. State management via Zustand only
+3. CSS Modules with semantic variables
+4. JSX files use `.jsx` extension
+5. PWA-first - work offline
+6. Mobile responsive design
 
-### REST Controller
-```java
-@RestController
-@RequestMapping("/api/v1/combatants")
-@RequiredArgsConstructor
-@Tag(name = "Combatants", description = "Combatant management API")
-public class CombatantController {
-    private final CombatantService service;
+### Backend
+1. UUID primary keys on all entities
+2. Record-based DTOs (immutable)
+3. Service layer with `@Transactional`
+4. OpenAPI docs with `@Tag` annotations
 
-    @GetMapping
-    public ResponseEntity<List<CombatantDTO>> getAll() {
-        return ResponseEntity.ok(service.findAll());
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CombatantDTO create(@Valid @RequestBody CreateCombatantRequest dto) {
-        return service.create(dto);
-    }
-}
-```
-
-### DTO Pattern
-```java
-public record CreateCombatantRequest(
-    String name, Integer initiative, Integer currentHp,
-    Integer maxHp, UUID encounterId
-) {}
-
-public record CombatantDTO(
-    UUID id, String name, Integer initiative,
-    Integer currentHp, Integer maxHp
-) {}
-```
-
-### Error Handling
-```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse("NOT_FOUND", ex.getMessage()));
-    }
-}
-```
+### Database
+1. Offline-first with IndexedDB (Dexie.js)
+2. Audit fields: createdAt, updatedAt
+3. No hard deletes - use soft deletes
 
 ## Key Constraints
 
 - **NO DICE ROLLING** - Never implement random number generation
 - **NO REAL-TIME COLLABORATION** - Single-user only
-- **NO EXTERNAL CDN LINKS** - All dependencies via npm/maven
 - **NO PLAYER COMBAT TOOLS** - DM-focused only
-- **NO TAILWIND CSS** - Use utility classes from src/styles/utilities.css
+- **NO EXTERNAL CDN LINKS** - All dependencies via npm/maven
+- **ALWAYS OFFLINE FIRST** - All features work without internet
+- **NO TAILWIND CSS** - Use utility classes from styles/
+
+## Parser Conventions
+
+When adding file parsers (like monsterParser.jsx):
+1. Export parsing functions: `parseTetraCubeText`, `parseTextToElements`
+2. Use JSX extension when returning React elements
+3. Support variable substitution: `[MON]`, `[STR ATK]`, `[INT 1d8]`
+4. Support markdown: `_text_` for italic (`<em>`)
 
 ## API Conventions
-
 - Base URL: `/api/v1/{resource}`
-- All endpoints require JWT in `Authorization: Bearer <token>` header
-- Error responses: `{ "code": "ERROR_CODE", "message": "..." }`
+- JWT auth: `Authorization: Bearer <token>`
+- Error format: `{ "code": "ERROR_CODE", "message": "..." }`
 
-## Stack
+## ESLint Configuration
+```javascript
+{
+  'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+  'react-hooks/rules-of-hooks': 'error',
+  'react-hooks/exhaustive-deps': 'warn',
+  'react-refresh/only-export-components': 'warn'
+}
+```
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 19, Vite, Zustand, TanStack Router, Dexie.js |
-| Backend | Spring Boot 3.4.x, JPA, PostgreSQL, Java 21 |
-| Auth | JWT + Spring Security |
-| API | REST + Axios |
-| PWA | Vite PWA plugin |
+## Commit Message Format
+```
+feat: add initiative tracker
+fix: resolve combatant sorting issue
+docs: update API documentation
+refactor: extract modal component
+test: add combatant service tests
+chore: update dependencies
+```
+
+## Agent Instructions
+
+For coding agents operating in this repository:
+1. Analyze codebase structure before making changes
+2. Follow existing patterns and naming conventions
+3. Run `npm run lint` before committing
+4. Test changes when possible
+5. Focus on one feature area at a time
+6. Communicate planned changes before implementation

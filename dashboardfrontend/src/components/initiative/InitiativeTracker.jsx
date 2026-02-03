@@ -24,6 +24,7 @@ export function InitiativeTracker() {
     currentTurnIndex,
     showAbilityReminders,
     loadEncounter,
+    rehydrateCombatants,
     nextTurn,
     previousTurn
   } = useInitiativeStore();
@@ -35,8 +36,9 @@ export function InitiativeTracker() {
 
   // Load encounter on mount (placeholder for actual loading logic)
   useEffect(() => {
-    // In production, load the active encounter from store
-  }, [activeEncounter]);
+    // Rehydrate combatants from IndexedDB when component mounts
+    rehydrateCombatants();
+  }, [rehydrateCombatants]);
 
   const handleNextTurn = () => {
     nextTurn();

@@ -23,7 +23,7 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.3.0",
     "uuid": "^9.0.0",
-    "firebase": "^10.8.0"
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

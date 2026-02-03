@@ -20,15 +20,15 @@ public record CreateCombatantRequest(
 
     @NotNull(message = "Current HP is required")
     @Min(value = 0, message = "Current HP cannot be negative")
-    Integer currentHp,
+    Integer currentHP,
 
     @NotNull(message = "Max HP is required")
     @Min(value = 1, message = "Max HP must be at least 1")
-    Integer maxHp,
+    Integer maxHP,
 
     @Nullable
     @Min(value = 0, message = "Temporary HP cannot be negative")
-    Integer temporaryHp,
+    Integer temporaryHP,
 
     @Nullable
     String size,

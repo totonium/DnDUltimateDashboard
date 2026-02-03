@@ -5,7 +5,7 @@
  * @module components/statblocks/SRDImportModal
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Search, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { srdImporter } from '../../services/srdImporter';
 import './SRDImportModal.css';
@@ -46,32 +46,66 @@ export function SRDImportModal({ onClose }) {
     if (selectedMonsters.length === 0) return;
 
     setImportStatus('importing');
-    const imported = [];
+    const results = [];
 
     for (const name of selectedMonsters) {
-      const result = await srdImporter.importOne(name);
-      if (result) {
-        imported.push(result);
+      try {
+        const result = await srdImporter.importOne(name);
+        if (result) {
+          results.push(result);
+        }
+      } catch (error) {
+        console.error(`Failed to import "${name}":`, error);
+        // Continue with other imports even if one fails
       }
     }
+
+    // Ensure all results have the proper structure before updating state
+    const validResults = results.filter(r => r && r.statblock && r.statblock.name);
+    const imported = validResults.filter(r => r.action === 'created');
+    const updated = validResults.filter(r => r.action === 'updated');
+
+    // Small delay to ensure all async operations are complete
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     setImportResult({
       total: selectedMonsters.length,
       imported: imported.length,
-      monsters: imported
+      updated: updated.length,
+      results: validResults
     });
     setImportStatus('complete');
   };
 
   const handleImportAll = async () => {
     setImportStatus('importing');
-    const imported = await srdImporter.importAll();
+    
+    try {
+      const results = await srdImporter.importAll();
 
-    setImportResult({
-      total: imported.length,
-      imported: imported.length,
-      monsters: imported
-    });
+      // Ensure all results have the proper structure before updating state
+      const validResults = results.filter(r => r && r.statblock && r.statblock.name);
+      const imported = validResults.filter(r => r.action === 'created');
+      const updated = validResults.filter(r => r.action === 'updated');
+
+      // Small delay to ensure all async operations are complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      setImportResult({
+        total: validResults.length,
+        imported: imported.length,
+        updated: updated.length,
+        results: validResults
+      });
+    } catch (error) {
+      console.error('Failed to import all monsters:', error);
+      setImportResult({
+        total: 0,
+        imported: 0,
+        updated: 0,
+        results: []
+      });
+    }
     setImportStatus('complete');
   };
 
@@ -110,10 +144,10 @@ export function SRDImportModal({ onClose }) {
               </div>
 
               <div className="selection-actions">
-                <button className="btn btn-small" onClick={handleSelectAll}>
+                <button className="btn btn-text" onClick={handleSelectAll}>
                   Select All ({filteredMonsters.length})
                 </button>
-                <button className="btn btn-small" onClick={handleDeselectAll}>
+                <button className="btn btn-text" onClick={handleDeselectAll}>
                   Deselect All
                 </button>
               </div>
@@ -166,18 +200,41 @@ export function SRDImportModal({ onClose }) {
               </div>
               <h3>Import Complete!</h3>
               <p>
-                Successfully imported {importResult.imported} of {importResult.total} monsters
+                Successfully processed {importResult.total} monsters:
               </p>
+              
+              <div className="result-summary">
+                {importResult.imported > 0 && (
+                  <div className="result-item success">
+                    <CheckCircle size={20} />
+                    <span>{importResult.imported} imported</span>
+                  </div>
+                )}
+                {importResult.updated > 0 && (
+                  <div className="result-item info">
+                    <CheckCircle size={20} />
+                    <span>{importResult.updated} updated</span>
+                  </div>
+                )}
+              </div>
 
               <div className="imported-list">
-                <h4>Imported Monsters</h4>
+                <h4>Processed Monsters</h4>
                 <ul>
-                  {importResult.monsters.map(m => (
-                    <li key={m.id}>
-                      <span className="name">{m.name}</span>
-                      <span className="cr">CR {m.cr}</span>
-                    </li>
-                  ))}
+                  {importResult.results.map((r, index) => {
+                    // Defensive: ensure statblock exists and has required properties
+                    const statblock = r.statblock || {};
+                    const displayName = statblock.name || `Unknown Monster ${index + 1}`;
+                    const displayCR = statblock.cr || statblock.challengeRating || 'Unknown';
+                    
+                    return (
+                      <li key={statblock.id || index} className={`result-item ${r.action}`}>
+                        <span className="name">{displayName}</span>
+                        <span className="cr">CR {displayCR}</span>
+                        <span className="action">{r.action === 'created' ? 'New' : 'Updated'}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 

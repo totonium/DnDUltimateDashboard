@@ -45,9 +45,9 @@ public class CombatantService {
                 .name(request.name())
                 .statblockId(request.statblockId())
                 .initiative(request.initiative())
-                .currentHp(request.currentHp())
-                .maxHp(request.maxHp())
-                .temporaryHp(request.temporaryHp())
+                .currentHP(request.currentHP())
+                .maxHP(request.maxHP())
+                .temporaryHP(request.temporaryHP())
                 .size(request.size())
                 .type(request.type())
                 .alignment(request.alignment())
@@ -69,9 +69,9 @@ public class CombatantService {
         if (request.name() != null) combatant.setName(request.name());
         if (request.statblockId() != null) combatant.setStatblockId(request.statblockId());
         if (request.initiative() != null) combatant.setInitiative(request.initiative());
-        if (request.currentHp() != null) combatant.setCurrentHp(request.currentHp());
-        if (request.maxHp() != null) combatant.setMaxHp(request.maxHp());
-        if (request.temporaryHp() != null) combatant.setTemporaryHp(request.temporaryHp());
+        if (request.currentHP() != null) combatant.setCurrentHP(request.currentHP());
+        if (request.maxHP() != null) combatant.setMaxHP(request.maxHP());
+        if (request.temporaryHP() != null) combatant.setTemporaryHP(request.temporaryHP());
         if (request.size() != null) combatant.setSize(request.size());
         if (request.type() != null) combatant.setType(request.type());
         if (request.alignment() != null) combatant.setAlignment(request.alignment());
@@ -96,16 +96,16 @@ public class CombatantService {
         Combatant combatant = combatantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Combatant", id));
 
-        int currentHp = combatant.getCurrentHp();
-        int tempHp = combatant.getTemporaryHp() != null ? combatant.getTemporaryHp() : 0;
+        int currentHP = combatant.getCurrentHP();
+        int tempHP = combatant.getTemporaryHP() != null ? combatant.getTemporaryHP() : 0;
 
         if (damage < 0) {
-            int absorbed = Math.min(Math.abs(damage), tempHp);
+            int absorbed = Math.min(Math.abs(damage), tempHP);
             int remainingDamage = Math.abs(damage) - absorbed;
-            combatant.setTemporaryHp(Math.max(0, tempHp - absorbed));
-            combatant.setCurrentHp(Math.max(0, currentHp - remainingDamage));
+            combatant.setTemporaryHP(Math.max(0, tempHP - absorbed));
+            combatant.setCurrentHP(Math.max(0, currentHP - remainingDamage));
         } else {
-            combatant.setCurrentHp(Math.min(combatant.getMaxHp(), currentHp + damage));
+            combatant.setCurrentHP(Math.min(combatant.getMaxHP(), currentHP + damage));
         }
 
         Combatant saved = combatantRepository.save(combatant);
@@ -118,9 +118,9 @@ public class CombatantService {
                 entity.getName(),
                 entity.getStatblockId(),
                 entity.getInitiative(),
-                entity.getCurrentHp(),
-                entity.getMaxHp(),
-                entity.getTemporaryHp(),
+                entity.getCurrentHP(),
+                entity.getMaxHP(),
+                entity.getTemporaryHP(),
                 entity.getSize(),
                 entity.getType(),
                 entity.getAlignment(),

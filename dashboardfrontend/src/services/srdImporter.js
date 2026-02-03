@@ -5,8 +5,7 @@
  * @module services/srdImporter
  */
 
-import { db } from '../db';
-import { v4 as uuidv4 } from 'uuid';
+import { useStatblockStore } from '../stores/statblocks';
 
 /**
  * 5e SRD Monster Data
@@ -17,25 +16,26 @@ const srdMonsters = [
   {
     name: 'Goblin',
     type: 'monster',
-    size: 'Small',
-    alignment: 'Neutral Evil',
+    size: 'small',
+    alignment: 'neutral evil',
     ac: 15,
     hp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    savingThrows: [],
+    speed: { walk: 30, climb: 0, burrow: 0, fly: 0, hover: false, swim: 0 },
+    speedNotes: '30 ft.',
+    scores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8, strMod: -1, dexMod: 2, conMod: 0, intMod: 0, wisMod: -1, chaMod: -1 },
+    savingThrows: {},
     skills: { stealth: 6 },
-    senses: { darkvision: 60 },
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
+    senses: [{ darkvision: 60 }],
+    passivePerception: 9,
+    damageImmunities: [],
+    damageResistances: [],
+    damageVulnerabilities: [],
     conditionImmunities: [],
-    languages: ['Common', 'Goblin'],
+    languages: ['common', 'goblin'],
     challengeRating: '1/4',
-    experiencePoints: 50,
+    xp: 50,
     abilities: [
       {
-        id: 'goblin-nimble-escape',
         name: 'Nimble Escape',
         description: 'The goblin can take the Disengage or Hide action as a bonus action on each of its turns.',
         usage: { type: 'none' }
@@ -43,22 +43,26 @@ const srdMonsters = [
     ],
     actions: [
       {
-        id: 'goblin-scimitar',
         name: 'Scimitar',
         description: 'Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '1d6+2', type: 'slashing' }
+        type: 'action'
       },
       {
-        id: 'goblin-shortbow',
         name: 'Shortbow',
         description: 'Ranged Weapon Attack: +4 to hit, reach 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.',
-        attackType: 'ranged',
-        damage: { dice: '1d6+2', type: 'piercing' }
+        type: 'action'
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: [],
+    lairActions: [],
+    mythicTrait: null,
+    mythicActions: [],
+    regionalEffects: null,
+    source: '5e srd',
+    isLocal: true,
+    tags: ['srd', 'monster'],
+    notes: ''
   },
   {
     name: 'Wolf',
@@ -68,7 +72,7 @@ const srdMonsters = [
     ac: 13,
     hp: 11,
     speed: { walk: 40 },
-    abilities: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
+    scores: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
     savingThrows: [],
     skills: { perception: 3, stealth: 4 },
     senses: { passivePerception: 13 },
@@ -100,7 +104,7 @@ const srdMonsters = [
     ac: 13,
     hp: 15,
     speed: { walk: 30 },
-    abilities: { str: 16, dex: 12, con: 16, int: 8, wis: 11, cha: 10 },
+    scores: { str: 16, dex: 12, con: 16, int: 8, wis: 11, cha: 10 },
     savingThrows: [],
     skills: { intimidation: 3 },
     senses: { darkvision: 60 },
@@ -139,7 +143,7 @@ const srdMonsters = [
     ac: 11,
     hp: 59,
     speed: { walk: 40 },
-    abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
+    scores: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
     savingThrows: [],
     skills: {},
     senses: { darkvision: 60 },
@@ -178,7 +182,7 @@ const srdMonsters = [
     ac: 15,
     hp: 65,
     speed: { walk: 30 },
-    abilities: { str: 15, dex: 16, con: 14, int: 14, wis: 11, cha: 14 },
+    scores: { str: 15, dex: 16, con: 14, int: 14, wis: 11, cha: 14 },
     savingThrows: { dex: 6, wis: 3 },
     skills: { athletics: 5, deception: 4 },
     senses: {},
@@ -231,7 +235,7 @@ const srdMonsters = [
     ac: 16,
     hp: 11,
     speed: { walk: 30 },
-    abilities: { str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10 },
+    scores: { str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10 },
     savingThrows: { wis: 2 },
     skills: { perception: 2 },
     senses: {},
@@ -263,7 +267,7 @@ const srdMonsters = [
     ac: 13,
     hp: 13,
     speed: { walk: 30 },
-    abilities: { str: 10, dex: 14, con: 15, int: 6, wis: 8, cha: 5 },
+    scores: { str: 10, dex: 14, con: 15, int: 6, wis: 8, cha: 5 },
     savingThrows: {},
     skills: {},
     senses: { darkvision: 60 },
@@ -309,7 +313,7 @@ const srdMonsters = [
     ac: 13,
     hp: 27,
     speed: { walk: 30 },
-    abilities: { str: 10, dex: 11, con: 12, int: 13, wis: 16, cha: 14 },
+    scores: { str: 10, dex: 11, con: 12, int: 13, wis: 16, cha: 14 },
     savingThrows: { wis: 5, cha: 4 },
     skills: { medicine: 7, persuasion: 4, religion: 4 },
     senses: {},
@@ -348,7 +352,7 @@ const srdMonsters = [
     ac: 12,
     hp: 9,
     speed: { walk: 30 },
-    abilities: { str: 11, dex: 12, con: 10, int: 10, wis: 11, cha: 10 },
+    scores: { str: 11, dex: 12, con: 10, int: 10, wis: 11, cha: 10 },
     savingThrows: { wis: 2 },
     skills: {},
     senses: {},
@@ -387,7 +391,7 @@ const srdMonsters = [
     ac: 17,
     hp: 75,
     speed: { walk: 40, fly: 80 },
-    abilities: { str: 19, dex: 14, con: 17, int: 12, wis: 11, cha: 15 },
+    scores: { str: 19, dex: 14, con: 17, int: 12, wis: 11, cha: 15 },
     savingThrows: { dex: 6, con: 7, wis: 4, cha: 6 },
     skills: { perception: 7, stealth: 6 },
     senses: { blindsight: 30, darkvision: 120 },
@@ -449,7 +453,7 @@ export const srdImporter = {
   /**
    * Import a single SRD monster
    * @param {string} monsterName - Name of the monster to import
-   * @returns {Promise<object|null>} Imported statblock or null if not found
+   * @returns {Promise<object|null>} Import result with action taken
    */
   async importOne(monsterName) {
     const monster = srdMonsters.find(
@@ -466,41 +470,51 @@ export const srdImporter = {
 
   /**
    * Import all SRD monsters
-   * @returns {Promise<array>} Array of imported statblock summaries
+   * @returns {Promise<array>} Array of import results with action details
    */
   async importAll() {
-    const imported = [];
+    const results = [];
 
     for (const monster of srdMonsters) {
-      const statblock = await this.importStatblock(monster);
-      imported.push({
-        id: statblock.id,
-        name: statblock.name,
-        cr: statblock.challengeRating
-      });
+      const result = await this.importStatblock(monster);
+      results.push(result); // Return the full result object with statblock property
     }
 
-    return imported;
+    return results;
   },
 
   /**
-   * Import a statblock object into the database
-   * @param {object} data - Statblock data
-   * @returns {Promise<object>} Created statblock with ID
-   */
-  async importStatblock(data) {
-    const statblock = {
-      id: uuidv4(),
-      ...data,
-      source: '5e SRD',
-      isLocal: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    * Import a statblock object into the database (with duplicate checking)
+    * @param {object} data - Statblock data
+    * @returns {Promise<object>} Import result with action taken and statblock data
+    */
+   async importStatblock(data) {
+     const statblockData = {
+       ...data,
+       challengeRating: data.challengeRating || data.cr,
+       xp: data.xp || data.experiencePoints,
+       speed: data.speed || { walk: 30, climb: 0, burrow: 0, fly: 0, hover: false, swim: 0 },
+       scores: data.scores || { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+       source: data.source || '5e SRD',
+       isLocal: true,
+       tags: data.tags || ['srd', data.type || 'monster']
+     }
 
-    await db.statblocks.add(statblock);
-    return statblock;
-  },
+     try {
+       const store = useStatblockStore.getState()
+       const result = await store.importStatblock(statblockData)
+       
+       if (!result || !result.statblock || !result.statblock.name) {
+         throw new Error('Invalid result structure from importStatblock')
+       }
+       
+       console.log(`SRD Import: ${result.action} statblock "${result.statblock.name}"`)
+       return result
+     } catch (error) {
+       console.error(`Failed to import SRD statblock "${data.name}":`, error)
+       throw new Error(`Failed to import ${data.name}: ${error.message}`)
+     }
+   },
 
   /**
    * Search SRD monsters by name

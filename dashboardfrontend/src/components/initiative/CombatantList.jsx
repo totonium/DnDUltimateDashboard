@@ -5,35 +5,47 @@
  * @module components/initiative/CombatantList
  */
 
+import { useState } from 'react';
 import { CombatantCard } from './CombatantCard';
+import { AddCombatantModal } from './AddCombatantModal';
 import './CombatantList.css';
 
 /**
  * CombatantList - Renders a list of combatants sorted by initiative
  */
 export function CombatantList({ combatants, currentTurnIndex, onOpenDamageModal }) {
-  if (combatants.length === 0) {
-    return (
-      <div className="combatant-list empty">
-        <div className="empty-state">
-          <h3>No Combatants</h3>
-          <p>Add combatants to start the encounter</p>
-          <button className="btn btn-primary">Add Combatant</button>
-        </div>
-      </div>
-    );
-  }
+  const [showAddModal, setShowAddModal] = useState(false);
 
   return (
     <div className="combatant-list">
-      {combatants.map((combatant, index) => (
-        <CombatantCard
-          key={combatant.id}
-          combatant={combatant}
-          isActiveTurn={index === currentTurnIndex}
-          onOpenDamageModal={() => onOpenDamageModal(combatant.id)}
-        />
-      ))}
+      {combatants.length === 0 ? (
+        <div className="empty-state">
+          <h3>No Combatants</h3>
+          <p>Add combatants to start the encounter</p>
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+            Add Combatant
+          </button>
+        </div>
+      ) : (
+        combatants.map((combatant, index) => (
+          <CombatantCard
+            key={combatant.id}
+            combatant={combatant}
+            isActiveTurn={index === currentTurnIndex}
+            onOpenDamageModal={() => onOpenDamageModal(combatant.id)}
+          />
+        ))
+      )}
+
+      {combatants.length > 0 && (
+        <button className="btn btn-primary add-combatant-fab" onClick={() => setShowAddModal(true)}>
+          Add Combatant
+        </button>
+      )}
+
+      {showAddModal && (
+        <AddCombatantModal onClose={() => setShowAddModal(false)} />
+      )}
     </div>
   );
 }

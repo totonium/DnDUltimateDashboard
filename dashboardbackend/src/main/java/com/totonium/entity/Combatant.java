@@ -30,13 +30,13 @@ public class Combatant {
     private Integer initiative;
 
     @Column(nullable = false)
-    private Integer currentHp;
+    private Integer currentHP;
 
     @Column(nullable = false)
-    private Integer maxHp;
+    private Integer maxHP;
 
     @Nullable
-    private Integer temporaryHp;
+    private Integer temporaryHP;
 
     @Column(length = 50)
     @Nullable

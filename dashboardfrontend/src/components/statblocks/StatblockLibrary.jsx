@@ -9,8 +9,25 @@ import { useState, useEffect } from 'react';
 import { useStatblockStore } from '../../stores/statblocks';
 import { useUIStore } from '../../stores/ui';
 import { StatblockViewer } from './StatblockViewer';
-import { Search, Filter, Grid, List, Plus, Upload, BookOpen } from 'lucide-react';
+import {SRDImportModal} from "./SRDImportModal"
+import {ImportModal} from "./ImportModal"
+import { Search, Filter, Grid, List, Plus, Upload, BookOpen, Edit2, X } from 'lucide-react';
 import './StatblockLibrary.css';
+
+export const CUSTOM_TYPE_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'boss', label: 'Boss' },
+  { value: 'elite', label: 'Elite' },
+  { value: 'minion', label: 'Minion' },
+  { value: 'solo', label: 'Solo' },
+  { value: 'swarm', label: 'Swarm' },
+  { value: 'leader', label: 'Leader' },
+  { value: 'mount', label: 'Mount' },
+  { value: 'pet', label: 'Pet' },
+  { value: 'familiar', label: 'Familiar' },
+  { value: 'summon', label: 'Summon' },
+  { value: 'environmental', label: 'Environmental' }
+];
 
 /**
  * StatblockLibrary - Main statblock browser and management
@@ -32,7 +49,7 @@ export function StatblockLibrary() {
     selectedStatblock
   } = useStatblockStore();
 
-  const { openModal } = useUIStore();
+  const { openModal, modals, closeModal } = useUIStore();
 
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showFilters, setShowFilters] = useState(false);
@@ -40,7 +57,7 @@ export function StatblockLibrary() {
   // Load statblocks on mount
   useEffect(() => {
     loadStatblocks();
-  }, []);
+  }, [loadStatblocks]);
 
   const filteredStatblocks = getFilteredStatblocks();
 
@@ -49,11 +66,18 @@ export function StatblockLibrary() {
   };
 
   const handleOpenImportModal = () => {
-    openModal({ id: 'import', type: 'statblock-import' });
+    openModal({ id: 'import-modal', type: 'import-modal' });
   };
 
   const handleOpenSRDImportModal = () => {
     openModal({ id: 'srd-import', type: 'srd-import' });
+  };
+
+  const SRDImportModalOpen = modals.some(m => m.id === 'srd-import');
+  const ImportModalOpen = modals.some(m => m.id === 'import-modal');
+
+    const handleCloseModal = (id) => {
+    closeModal(id);
   };
 
   const handleCreateStatblock = () => {
@@ -210,6 +234,18 @@ export function StatblockLibrary() {
           onClose={() => selectStatblock(null)}
         />
       )}
+
+      {ImportModalOpen && (
+        <ImportModal
+          onClose={() => handleCloseModal("import-modal")}
+        />
+      )}
+
+      {SRDImportModalOpen && (
+        <SRDImportModal
+          onClose={() => handleCloseModal("srd-import")}
+        />
+      )}
     </div>
   );
 }
@@ -218,6 +254,20 @@ export function StatblockLibrary() {
  * Statblock Card for Grid View
  */
 function StatblockCard({ statblock, onClick, isSelected }) {
+  const { setCustomType } = useStatblockStore();
+  const [isEditingType, setIsEditingType] = useState(false);
+  const [selectedType, setSelectedType] = useState(statblock.customType || '');
+
+  const handleTypeChange = async (e) => {
+    const newType = e.target.value;
+    setSelectedType(newType);
+    await setCustomType(statblock.id, newType);
+    setIsEditingType(false);
+  };
+
+  const currentTypeOption = CUSTOM_TYPE_OPTIONS.find(opt => opt.value === selectedType);
+  const displayLabel = currentTypeOption?.label || '';
+
   return (
     <div
       className={`statblock-card ${isSelected ? 'selected' : ''}`}
@@ -225,9 +275,34 @@ function StatblockCard({ statblock, onClick, isSelected }) {
     >
       <div className="card-header">
         <h3 className="statblock-name">{statblock.name}</h3>
-        <span className={`type-badge ${statblock.type}`}>
-          {statblock.type}
-        </span>
+        <div className="type-badge-container">
+          {isEditingType ? (
+            <select
+              className="type-select"
+              value={selectedType}
+              onChange={handleTypeChange}
+              onBlur={() => setIsEditingType(false)}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            >
+              {CUSTOM_TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : (
+            <button
+              className={`type-badge custom-type-${selectedType || 'none'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditingType(true);
+              }}
+              title="Click to edit category"
+            >
+              {displayLabel || statblock.type}
+              <Edit2 size={10} className="edit-icon" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card-stats">
@@ -261,6 +336,20 @@ function StatblockCard({ statblock, onClick, isSelected }) {
  * Statblock List Item for List View
  */
 function StatblockListItem({ statblock, onClick, isSelected }) {
+  const { setCustomType } = useStatblockStore();
+  const [isEditingType, setIsEditingType] = useState(false);
+  const [selectedType, setSelectedType] = useState(statblock.customType || '');
+
+  const handleTypeChange = async (e) => {
+    const newType = e.target.value;
+    setSelectedType(newType);
+    await setCustomType(statblock.id, newType);
+    setIsEditingType(false);
+  };
+
+  const currentTypeOption = CUSTOM_TYPE_OPTIONS.find(opt => opt.value === selectedType);
+  const displayLabel = currentTypeOption?.label || '';
+
   return (
     <div
       className={`statblock-list-item ${isSelected ? 'selected' : ''}`}
@@ -268,7 +357,34 @@ function StatblockListItem({ statblock, onClick, isSelected }) {
     >
       <div className="item-main">
         <h3>{statblock.name}</h3>
-        <span className={`type-badge ${statblock.type}`}>{statblock.type}</span>
+        <div className="type-badge-container">
+          {isEditingType ? (
+            <select
+              className="type-select"
+              value={selectedType}
+              onChange={handleTypeChange}
+              onBlur={() => setIsEditingType(false)}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            >
+              {CUSTOM_TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : (
+            <button
+              className={`type-badge custom-type-${selectedType || 'none'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditingType(true);
+              }}
+              title="Click to edit category"
+            >
+              {displayLabel || statblock.type}
+              <Edit2 size={10} className="edit-icon" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="item-stats">
         <span>AC: {statblock.ac}</span>

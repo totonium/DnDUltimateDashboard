@@ -69,11 +69,27 @@ export const useInitiativeStore = create(
 
       updateCombatant: async (id, updates) => {
         await db.combatants.update(id, updates)
-        set((state) => ({
-          combatants: state.combatants.map(c => 
+        set((state) => {
+          const updatedCombatants = state.combatants.map(c => 
             c.id === id ? { ...c, ...updates } : c
           )
-        }))
+          
+          // If initiative was updated, resort the combatants
+          if (updates.initiative !== undefined) {
+            const sortedCombatants = updatedCombatants.sort((a, b) => b.initiative - a.initiative)
+            
+            // Update currentTurnIndex if the selected combatant moved
+            const newIndex = sortedCombatants.findIndex(c => c.id === state.selectedCombatantId)
+            const newTurnIndex = newIndex >= 0 ? newIndex : state.currentTurnIndex
+            
+            return {
+              combatants: sortedCombatants,
+              currentTurnIndex: newTurnIndex
+            }
+          }
+          
+          return { combatants: updatedCombatants }
+        })
       },
 
       nextTurn: () => {
@@ -129,9 +145,9 @@ export const useInitiativeStore = create(
       updateHP: (id, hpChange) => {
         const combatant = get().combatants.find(c => c.id === id)
         if (!combatant) return
-        
+
         const newHP = Math.max(0, combatant.currentHP + hpChange)
-        get().updateCombatant(id, { currentHP: newHP })
+        get().updateCombatant(id, { currentHP: Math.min(newHP, combatant.maxHP) })
       },
 
       setHP: (id, hp) => {
@@ -180,6 +196,46 @@ export const useInitiativeStore = create(
 
       selectCombatant: (id) => {
         set({ selectedCombatantId: id })
+      },
+
+      rehydrateCombatants: async () => {
+        const { activeEncounter, combatants: persistedCombatants } = get()
+        
+        if (activeEncounter) {
+          // Load combatants from IndexedDB for active encounter
+          const combatants = await db.combatants
+            .where('encounterId')
+            .equals(activeEncounter)
+            .toArray()
+          
+          set({ combatants })
+        } else if (persistedCombatants && persistedCombatants.length > 0) {
+          // If combatants exist in localStorage but no active encounter,
+          // create a default encounter and load combatants
+          const defaultEncounter = {
+            id: uuidv4(),
+            name: 'Current Encounter',
+            createdAt: new Date().toISOString(),
+            active: false
+          }
+          
+          await db.encounters.add(defaultEncounter)
+          
+          // Update combatants to reference the new encounter
+          const combatantPromises = persistedCombatants.map(async (combatant) => {
+            const updatedCombatant = { ...combatant, encounterId: defaultEncounter.id }
+            await db.combatants.add(updatedCombatant)
+            return updatedCombatant
+          })
+          
+          const updatedCombatants = await Promise.all(combatantPromises)
+          
+          set({
+            activeEncounter: defaultEncounter.id,
+            combatants: updatedCombatants,
+            encounters: [defaultEncounter]
+          })
+        }
       }
     }),
     {
@@ -187,8 +243,16 @@ export const useInitiativeStore = create(
       partialize: (state) => ({
         encounters: state.encounters,
         activeEncounter: state.activeEncounter,
+        combatants: state.combatants,
+        currentTurnIndex: state.currentTurnIndex,
+        selectedCombatantId: state.selectedCombatantId,
         showAbilityReminders: state.showAbilityReminders
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.rehydrateCombatants()
+        }
+      }
     }
   )
 )

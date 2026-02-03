@@ -17,9 +17,9 @@ export function DamageModal({ combatantId, onClose }) {
   const { combatants, updateHP, setHP, setTemporaryHP } = useInitiativeStore();
 
   const combatant = combatants.find(c => c.id === combatantId);
+  const { removeCombatant, } = useInitiativeStore();
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('damage'); // 'damage' or 'healing'
-  const [tempHP, setTempHP] = useState(combatant?.temporaryHP || 0);
   const [showTempHP, setShowTempHP] = useState(false);
 
   // Close on escape key
@@ -38,7 +38,7 @@ export function DamageModal({ combatantId, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const value = parseInt(amount, 10);
+    var value = parseInt(amount, 10);
     if (isNaN(value) || value < 0) return;
 
     if (showTempHP) {
@@ -46,10 +46,19 @@ export function DamageModal({ combatantId, onClose }) {
       setTemporaryHP(combatantId, value);
     } else if (type === 'damage') {
       // Applying damage
-      updateHP(combatantId, -value);
+      if(combatant.temporaryHP != 0){
+        const oldTempHP = combatant.temporaryHP;
+        setTemporaryHP(combatantId, Math.max(combatant.temporaryHP - value, 0));
+        value = value - oldTempHP;
+      }
+      if (value > 0) updateHP(combatantId, -value);
     } else {
       // Applying healing
       updateHP(combatantId, value);
+    }
+
+    if (combatant.hp <= 0) {
+      removeCombatant(combatant.id);
     }
 
     onClose();
@@ -63,7 +72,7 @@ export function DamageModal({ combatantId, onClose }) {
   };
 
   const currentHP = combatant.currentHP;
-  const maxHP = combatant.maxHp;
+  const maxHP = combatant.maxHP;
 
   return (
     <div className="modal-overlay" onClick={onClose}>

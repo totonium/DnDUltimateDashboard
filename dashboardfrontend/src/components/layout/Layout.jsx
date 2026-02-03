@@ -3,7 +3,6 @@ import { Outlet } from '@tanstack/react-router'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { useUIStore, useAuthStore } from '../../stores'
-import { initializeFirestore } from '../../lib/firebase'
 
 export function Layout() {
   const { theme } = useUIStore()
@@ -15,7 +14,6 @@ export function Layout() {
 
   useEffect(() => {
     const unsubscribe = init()
-    initializeFirestore()
     return () => {
       if (typeof unsubscribe === 'function') {
         unsubscribe()

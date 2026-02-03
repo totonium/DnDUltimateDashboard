@@ -21,9 +21,9 @@
 
 - [X] Test dev server
 - [X] Create backend API template
-- [ ] Create .env.example file
-- [ ] Add environment type declarations
-- [ ] Set up Spring Boot project
+- [X] Create .env.example file
+- [X] Add environment type declarations
+- [X] Set up Spring Boot project
 - [ ] Configure PostgreSQL database
 
 ### Phase 2 - Initiative Tracker (Upcoming)

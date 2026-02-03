@@ -18,6 +18,14 @@
   cursor: not-allowed;
 }
 
+.btn-text {
+  color: var(--text-secondary);
+}
+
+.btn-text:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+
 .btn-primary {
   background: var(--color-primary);
   color: white;

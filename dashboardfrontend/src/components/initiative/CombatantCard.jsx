@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useInitiativeStore } from '../../stores/initiative';
 import { Shield, Sword, Eye, EyeOff, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { ConfirmModal } from '../common/ConfirmModal';
 import './CombatantCard.css';
 
 /**
@@ -15,9 +16,11 @@ import './CombatantCard.css';
  */
 export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
   const [expanded, setExpanded] = useState(false);
-  const [isHidden, setIsHidden] = useState(combatant.isHidden || false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [editingInitiative, setEditingInitiative] = useState(false);
+  const [initiativeValue, setInitiativeValue] = useState(combatant.initiative);
 
-  const { selectCombatant, selectedCombatantId, removeCombatant, updateCombatant } = useInitiativeStore();
+  const { selectedCombatantId, removeCombatant, updateCombatant } = useInitiativeStore();
 
   const isSelected = selectedCombatantId === combatant.id;
 
@@ -25,22 +28,44 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
   const hpPercent = Math.min(100, Math.max(0, (combatant.currentHP / combatant.maxHP) * 100));
   const hpStatus = hpPercent > 50 ? 'healthy' : hpPercent > 25 ? 'injured' : 'critical';
 
-  const handleToggleHidden = (e) => {
-    e.stopPropagation();
-    setIsHidden(!isHidden);
-    updateCombatant(combatant.id, { isHidden: !isHidden });
-  };
-
-  const handleSelect = () => {
-    selectCombatant(combatant.id);
-  };
-
   const handleRemove = (e) => {
     e.stopPropagation();
-    if (window.confirm(`Remove ${combatant.name} from the encounter?`)) {
-      removeCombatant(combatant.id);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmRemove = () => {
+    removeCombatant(combatant.id);
+  };
+
+  const handleInitiativeClick = (e) => {
+    e.stopPropagation();
+    setEditingInitiative(true);
+    // Reset to current combatant value when starting to edit
+    setInitiativeValue(combatant.initiative);
+  };
+
+  const handleInitiativeChange = (e) => {
+    setInitiativeValue(e.target.value);
+  };
+
+  const handleInitiativeBlur = () => {
+    setEditingInitiative(false);
+    const newInitiative = parseInt(initiativeValue) || 0;
+    if (newInitiative !== combatant.initiative) {
+      updateCombatant(combatant.id, { initiative: newInitiative });
     }
   };
+
+  const handleInitiativeKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleInitiativeBlur();
+    } else if (e.key === 'Escape') {
+      setEditingInitiative(false);
+      setInitiativeValue(combatant.initiative);
+    }
+  };
+
+  
 
   const handleStatusEffectClick = (effect) => {
     // Placeholder for status effect details
@@ -50,12 +75,30 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
   return (
     <div
       className={`combatant-card ${isActiveTurn ? 'active-turn' : ''} ${isSelected ? 'selected' : ''} ${hpStatus}`}
-      onClick={handleSelect}
     >
       <div className="card-main">
         {/* Initiative Score */}
         <div className="initiative-badge">
-          <span className="initiative-value">{combatant.initiative}</span>
+          {editingInitiative ? (
+            <input
+              type="number"
+              className="initiative-input"
+              value={initiativeValue}
+              onChange={handleInitiativeChange}
+              onBlur={handleInitiativeBlur}
+              onKeyDown={handleInitiativeKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          ) : (
+            <span 
+              className="initiative-value editable"
+              onClick={handleInitiativeClick}
+              title="Click to edit initiative"
+            >
+              {combatant.initiative}
+            </span>
+          )}
           <span className="initiative-label">Init</span>
         </div>
 
@@ -63,7 +106,7 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
         <div className="combatant-info">
           <div className="combatant-header">
             <h3 className="combatant-name">
-              {isHidden ? '???' : combatant.name}
+              {combatant.name}
             </h3>
             <div className="combatant-badges">
               <span className={`type-badge ${combatant.type}`}>
@@ -89,9 +132,9 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
                   style={{ width: `${hpPercent}%` }}
                 />
                 <div className="hp-text">
-                  <span className="hp-current">{isHidden ? '??' : combatant.currentHP}</span>
+                  <span className="hp-current">{combatant.currentHP}</span>
                   <span className="hp-separator">/</span>
-                  <span className="hp-max">{combatant.maxHp}</span>
+                  <span className="hp-max">{combatant.maxHP}</span>
                 </div>
               </div>
               <div className="hp-actions">
@@ -125,13 +168,6 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
 
         {/* Actions */}
         <div className="card-actions">
-          <button
-            className="action-btn"
-            onClick={handleToggleHidden}
-            title={isHidden ? 'Show to players' : 'Hide from players'}
-          >
-            {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
           <button
             className="action-btn danger"
             onClick={handleRemove}
@@ -190,13 +226,13 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
 
           {/* Quick Actions */}
           <div className="quick-actions">
-            <button className="btn btn-small" onClick={() => {}}>
+            <button className="btn btn-text" onClick={() => {}}>
               Add Status Effect
             </button>
-            <button className="btn btn-small" onClick={() => {}}>
+            <button className="btn btn-text" onClick={() => {}}>
               Add Note
             </button>
-            <button className="btn btn-small" onClick={() => {}}>
+            <button className="btn btn-text" onClick={() => {}}>
               Link Statblock
             </button>
           </div>
@@ -210,6 +246,17 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
           <span>Active Turn</span>
         </div>
       )}
+
+      {/* Confirm Remove Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmRemove}
+        title="Remove Combatant"
+        message={`Remove ${combatant.name} from the encounter?`}
+        confirmText="Remove"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

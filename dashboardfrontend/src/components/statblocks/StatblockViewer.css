@@ -203,3 +203,89 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+.statblock-subtitle-meta {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.meta-item {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.stat-extra {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+.proficiency-bonus {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.prof-bonus {
+  font-size: var(--text-sm);
+  color: var(--color-secondary);
+  font-weight: var(--font-medium);
+}
+
+.defensive-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--text-sm);
+}
+
+.defensive-item {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.senses-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+}
+
+.passive-perception {
+  font-size: var(--text-sm);
+}
+
+.legendary-description,
+.lair-description,
+.mythic-description,
+.regional-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: var(--space-2) 0;
+  padding: var(--space-2);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.regional-end {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: var(--space-2);
+}
+
+.subtitle-part::after {
+  content: ', ';
+}
+
+.subtitle-part:last-child::after {
+  content: '';
+}

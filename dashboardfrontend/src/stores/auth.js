@@ -1,12 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth'
-import { auth } from '../lib/firebase'
+import { authService } from '../services/authService'
 
 export const useAuthStore = create(
   persist(
@@ -17,56 +11,66 @@ export const useAuthStore = create(
       isLoading: true,
       error: null,
 
-      init: () => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+      init: async () => {
+        set({ isLoading: true, error: null })
+        try {
+          const user = await authService.init()
           set({ 
-            user: user ? { uid: user.uid, email: user.email, displayName: user.displayName } : null,
-            userId: user?.uid || null,
+            user: user ? { id: user.id, email: user.email } : null,
+            userId: user?.id || null,
             isAuthenticated: !!user,
             isLoading: false
           })
-        })
-        return unsubscribe
+        } catch (error) {
+          set({ error: error.message, isLoading: false })
+        }
       },
 
       login: async (email, password) => {
         set({ isLoading: true, error: null })
         try {
-          const result = await signInWithEmailAndPassword(auth, email, password)
-          set({ 
-            user: { uid: result.user.uid, email: result.user.email },
-            userId: result.user.uid,
-            isAuthenticated: true,
-            isLoading: false
-          })
+          const response = await authService.signIn(email, password)
+          if (response.token) {
+            set({ 
+              user: { id: response.id || 'temp', email: response.email || email },
+              userId: response.id || 'temp',
+              isAuthenticated: true,
+              isLoading: false
+            })
+          }
         } catch (error) {
-          set({ error: error.message, isLoading: false })
-          throw error
+          const errorMessage = error.response?.data?.message || error.message || 'Login failed'
+          set({ error: errorMessage, isLoading: false })
+          throw new Error(errorMessage)
         }
       },
 
       register: async (email, password) => {
         set({ isLoading: true, error: null })
         try {
-          const result = await createUserWithEmailAndPassword(auth, email, password)
-          set({ 
-            user: { uid: result.user.uid, email: result.user.email },
-            userId: result.user.uid,
-            isAuthenticated: true,
-            isLoading: false
-          })
+          const response = await authService.signUp(email, password)
+          if (response.token) {
+            set({ 
+              user: { id: response.id || 'temp', email: response.email || email },
+              userId: response.id || 'temp',
+              isAuthenticated: true,
+              isLoading: false
+            })
+          }
         } catch (error) {
-          set({ error: error.message, isLoading: false })
-          throw error
+          const errorMessage = error.response?.data?.message || error.message || 'Registration failed'
+          set({ error: errorMessage, isLoading: false })
+          throw new Error(errorMessage)
         }
       },
 
       logout: async () => {
+        set({ isLoading: true, error: null })
         try {
-          await signOut(auth)
-          set({ user: null, userId: null, isAuthenticated: false })
+          await authService.logout()
+          set({ user: null, userId: null, isAuthenticated: false, isLoading: false })
         } catch (error) {
-          set({ error: error.message })
+          set({ error: error.message, isLoading: false })
           throw error
         }
       },

@@ -1,13 +1,11 @@
 /**
  * Audio Service
- * Handles audio playback, file management, and Firebase Storage integration
+ * Handles audio playback and local file management
  *
  * @module services/audioService
  */
 
 import { db } from '../db';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -29,7 +27,7 @@ class AudioService {
   }
 
   /**
-   * Upload an audio file to Firebase Storage
+   * Store an audio file locally
    * @param {File} file - Audio file to upload
    * @param {string} category - Category: 'music', 'sfx', or 'atmosphere'
    * @returns {Promise<object>} Track metadata
@@ -39,12 +37,7 @@ class AudioService {
     if (!userId) throw new Error('User not authenticated');
 
     const fileId = uuidv4();
-    const extension = file.name.split('.').pop();
-    const storagePath = `users/${userId}/audio/${fileId}.${extension}`;
-
-    // Upload to Firebase Storage
-    const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, file);
+    const blob = new Blob([file], { type: file.type });
 
     // Get audio duration
     const duration = await this.getAudioDuration(file);
@@ -54,13 +47,19 @@ class AudioService {
       id: fileId,
       name: file.name.replace(/\.[^/.]+$/, ''),
       category,
-      storagePath,
       duration,
       tags: [],
       volume: 1.0,
       loop: false,
       createdAt: new Date().toISOString()
     };
+
+    // Cache the audio blob locally
+    await db.cache.put({
+      key: `audioBlob_${fileId}`,
+      blob,
+      expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year
+    });
 
     // Save to local database
     await db.audioTracks.add(trackData);
@@ -86,7 +85,7 @@ class AudioService {
   }
 
   /**
-   * Get audio blob from local cache or Firebase
+   * Get audio blob from local cache
    * @param {string} trackId - Track ID
    * @returns {Promise<Blob|null>} Audio blob or null
    */
@@ -103,23 +102,8 @@ class AudioService {
       return blobRecord.blob;
     }
 
-    // Fetch from Firebase Storage
-    const track = await db.audioTracks.get(trackId);
-    if (!track) return null;
-
-    const storageRef = ref(storage, track.storagePath);
-    const url = await getDownloadURL(storageRef);
-    const blob = await fetch(url).then(r => r.blob());
-
-    // Cache locally
-    await db.cache.put({
-      key: `audioBlob_${trackId}`,
-      blob,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-    });
-
-    this.loadedBlobs.set(trackId, blob);
-    return blob;
+    // Track not found
+    return null;
   }
 
   /**
@@ -216,14 +200,6 @@ class AudioService {
   async deleteTrack(trackId) {
     const track = await db.audioTracks.get(trackId);
     if (!track) return;
-
-    // Delete from Firebase Storage
-    try {
-      const storageRef = ref(storage, track.storagePath);
-      await deleteObject(storageRef);
-    } catch (error) {
-      console.warn('Failed to delete from storage:', error);
-    }
 
     // Delete from local database
     await db.audioTracks.delete(trackId);

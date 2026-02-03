@@ -6,19 +6,20 @@
  */
 
 import { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Edit, Copy, Trash2, Plus } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Copy, Trash2 } from 'lucide-react';
 import { useStatblockStore } from '../../stores/statblocks';
+import { parseTextToElements } from '../../services/monsterParser.jsx';
 import './StatblockViewer.css';
 
-/**
- * StatblockViewer - Full statblock display component
- */
-export function StatblockViewer({ statblock, onClose, onEdit }) {
+export function StatblockViewer({ statblock, onClose }) {
   const [expandedSections, setExpandedSections] = useState({
     abilities: true,
     actions: true,
-    reactions: false,
-    legendary: false
+    reactions: true,
+    legendary: true,
+    lair: true,
+    mythic: true,
+    regional: true
   });
 
   const { deleteStatblock, duplicateStatblock } = useStatblockStore();
@@ -49,6 +50,28 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
     };
   };
 
+  const formatSpeed = () => {
+    if (statblock.speedNotes) {
+      return statblock.speedNotes;
+    }
+    if (statblock.speed) {
+      const entries = Object.entries(statblock.speed).filter(([k, v]) => v !== 0 && k !== 'notes');
+      if (entries.length === 0) return '30 ft.';
+      return entries.map(([k, v]) => `${v} ft. ${k}`).join(', ');
+    }
+    return '30 ft.';
+  };
+
+  const formatDamageLine = (label, items) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="damage-line">
+        <strong>{label}: </strong>
+        {items.join(', ')}
+      </div>
+    );
+  };
+
   return (
     <div className="statblock-viewer-overlay" onClick={onClose}>
       <div className="statblock-viewer" onClick={e => e.stopPropagation()}>
@@ -56,9 +79,9 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           <div className="header-main">
             <h1 className="statblock-title">{statblock.name}</h1>
             <div className="statblock-subtitle">
-              {statblock.size && <span>{statblock.size}</span>}
-              {statblock.type && <span>{statblock.type}</span>}
-              {statblock.alignment && <span>{statblock.alignment}</span>}
+              {statblock.size && <span className="subtitle-part">{statblock.size}</span>}
+              {statblock.type && <span className="subtitle-part">{statblock.type}</span>}
+              {statblock.alignment && <span className="subtitle-part">{statblock.alignment}</span>}
             </div>
           </div>
           <div className="header-actions">
@@ -74,30 +97,36 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           </div>
         </header>
 
-        {/* Core Stats */}
+        <div className="statblock-subtitle-meta">
+          {statblock.hitDice && <span className="meta-item">Hit Dice: {statblock.hitDice}</span>}
+          {statblock.challengeRating && <span className="meta-item">CR: {statblock.challengeRating}</span>}
+          {statblock.xp && <span className="meta-item">{statblock.xp} XP</span>}
+        </div>
+
         <div className="core-stats">
           <div className="stat-box">
             <span className="stat-label">Armor Class</span>
             <span className="stat-value">{statblock.ac}</span>
+            {statblock.acNotes && <span className="stat-extra">{statblock.acNotes}</span>}
+            {statblock.natArmorBonus > 0 && (
+              <span className="stat-extra">Natural Armor: +{statblock.natArmorBonus}</span>
+            )}
           </div>
           <div className="stat-box">
             <span className="stat-label">Hit Points</span>
             <span className="stat-value">{statblock.hp}</span>
+            {statblock.hpFormula && <span className="stat-extra">{statblock.hpFormula}</span>}
           </div>
           <div className="stat-box">
             <span className="stat-label">Speed</span>
-            <span className="stat-value">
-              {statblock.speed ? Object.entries(statblock.speed)
-                .map(([k, v]) => `${v} ft. ${k}`)
-                .join(', ') : '30 ft.'}
-            </span>
+            <span className="stat-value">{formatSpeed()}</span>
           </div>
         </div>
 
-        {/* Ability Scores */}
         <div className="ability-scores">
           {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => {
-            const { score, modifier } = formatAbilityScore(statblock.abilities?.[ability] || 10);
+            const score = statblock.scores?.[ability] || 10;
+            const { modifier } = formatAbilityScore(score);
             return (
               <div key={ability} className="ability-box">
                 <span className="ability-name">{ability.toUpperCase()}</span>
@@ -108,46 +137,71 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           })}
         </div>
 
-        {/* Saving Throws */}
+        <div className="defensive-line">
+          {statblock.damageImmunities?.length > 0 && (
+            <span className="defensive-item">
+              <strong>Damage Immunities:</strong> {statblock.damageImmunities.join(', ')}
+            </span>
+          )}
+          {statblock.damageResistances?.length > 0 && (
+            <span className="defensive-item">
+              <strong>Damage Resistances:</strong> {statblock.damageResistances.join(', ')}
+            </span>
+          )}
+          {statblock.damageVulnerabilities?.length > 0 && (
+            <span className="defensive-item">
+              <strong>Damage Vulnerabilities:</strong> {statblock.damageVulnerabilities.join(', ')}
+            </span>
+          )}
+          {statblock.conditionImmunities?.length > 0 && (
+            <span className="defensive-item">
+              <strong>Condition Immunities:</strong> {statblock.conditionImmunities.join(', ')}
+            </span>
+          )}
+        </div>
+
         {statblock.savingThrows?.length > 0 && (
           <div className="saving-throws">
             <strong>Saving Throws: </strong>
             {statblock.savingThrows.map((st, i) => (
               <span key={i}>
-                {st.ability} {st.modifier >= 0 ? '+' : ''}{st.modifier}
+                {typeof st === 'object' ? `${st.ability} ${st.modifier >= 0 ? '+' : '-'}${st.modifier}` : st}
                 {i < statblock.savingThrows.length - 1 ? ', ' : ''}
               </span>
             ))}
           </div>
         )}
 
-        {/* Skills */}
         {statblock.skills && Object.keys(statblock.skills).length > 0 && (
           <div className="skills">
             <strong>Skills: </strong>
-            {Object.entries(statblock.skills).map(([skill, mod], i) => (
-              <span key={skill}>
-                {skill} {mod >= 0 ? '+' : ''}{mod}
-                {i < Object.keys(statblock.skills).length - 1 ? ', ' : ''}
+            {statblock.skills.map((skill, i) => (
+              <span key={i}>
+                {typeof skill === 'object' ? `${skill.skill} ${skill.modifier >= 0 ? '+' : '-'}${skill.modifier}` : skill}
+                {i < statblock.skills.length - 1 ? ', ' : ''}
               </span>
             ))}
           </div>
         )}
 
-        {/* Senses */}
-        {statblock.senses && Object.keys(statblock.senses).length > 0 && (
-          <div className="senses">
-            <strong>Senses: </strong>
-            {Object.entries(statblock.senses).map(([sense, value]) => (
-              <span key={sense}>
-                {sense} {value} ft.
-                {sense !== Object.keys(statblock.senses)[Object.keys(statblock.senses).length - 1] ? ', ' : ''}
-              </span>
-            ))}
+        <div className="senses-line">
+          {statblock.senses && Object.keys(statblock.senses).length > 0 && (
+            <div className="senses">
+              <strong>Senses: </strong>
+              {Object.entries(statblock.senses).map(([sense, value], i, arr) => (
+                <span key={sense}>
+                  {sense} {value} ft.
+                  {i < arr.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="passive-perception">
+            <strong>Passive Perception: </strong>
+            <span>{statblock.passivePerception || 10}</span>
           </div>
-        )}
+        </div>
 
-        {/* Languages */}
         {statblock.languages?.length > 0 && (
           <div className="languages">
             <strong>Languages: </strong>
@@ -155,18 +209,16 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           </div>
         )}
 
-        {/* Challenge Rating */}
         <div className="challenge-rating">
           <strong>Challenge </strong>
           <span>{statblock.challengeRating}</span>
-          {statblock.experiencePoints && (
-            <span className="xp">({statblock.experiencePoints} XP)</span>
+          {statblock.xp && (
+            <span className="xp">({statblock.xp} XP)</span>
           )}
         </div>
 
         <hr className="divider" />
 
-        {/* Special Abilities */}
         {statblock.abilities?.length > 0 && (
           <Section
             title="Special Abilities"
@@ -180,7 +232,6 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           </Section>
         )}
 
-        {/* Actions */}
         {statblock.actions?.length > 0 && (
           <Section
             title="Actions"
@@ -194,7 +245,6 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           </Section>
         )}
 
-        {/* Reactions */}
         {statblock.reactions?.length > 0 && (
           <Section
             title="Reactions"
@@ -208,17 +258,67 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
           </Section>
         )}
 
-        {/* Legendary Actions */}
-        {statblock.legendaryActions?.length > 0 && (
+        {(statblock.legendaryActions?.length > 0 || statblock.legendaryActions.description) && (
           <Section
             title="Legendary Actions"
             icon="👑"
             expanded={expandedSections.legendary}
             onToggle={() => toggleSection('legendary')}
           >
-            {statblock.legendaryActions.map((action, i) => (
-              <AbilityContent key={i} ability={action} />
-            ))}
+            {typeof statblock.legendaryActions[0] === 'string' ? (
+              <p className="legendary-description">{parseTextToElements(statblock.legendaryActions[0])}</p>
+            ) : (
+              <>
+                {statblock.legendaryActions?.description && (
+                  <p className="legendary-description">{parseTextToElements(statblock.legendaryActions.description)}</p>
+                )}
+                {statblock.legendaryActions.actions?.map((action, i) => (
+                  <AbilityContent key={i} ability={action} />
+                ))}
+              </>
+            )}
+          </Section>
+        )}
+
+        {statblock.lairActions && (
+          <Section
+            title="Lair Actions"
+            icon="🏰"
+            expanded={expandedSections.lair}
+            onToggle={() => toggleSection('lair')}
+          >
+            {statblock.lairActions.description && (
+              <p className="lair-description">{parseTextToElements(statblock.lairActions.description)}</p>
+            )}
+          </Section>
+        )}
+
+        {statblock.mythicTrait && (
+          <Section
+            title="Mythic Trait"
+            icon="🌟"
+            expanded={expandedSections.mythic}
+            onToggle={() => toggleSection('mythic')}
+          >
+            {statblock.mythicTrait.description && (
+              <p className="mythic-description">{parseTextToElements(statblock.mythicTrait.description)}</p>
+            )}
+          </Section>
+        )}
+
+        {statblock.regionalEffects && (
+          <Section
+            title="Regional Effects"
+            icon="🗺️"
+            expanded={expandedSections.regional}
+            onToggle={() => toggleSection('regional')}
+          >
+            {statblock.regionalEffects.description && (
+              <p className="regional-description">{parseTextToElements(statblock.regionalEffects.description)}</p>
+            )}
+            {statblock.regionalEffects.endDescription && (
+              <p className="regional-end">{statblock.regionalEffects.endDescription}</p>
+            )}
           </Section>
         )}
       </div>
@@ -226,9 +326,6 @@ export function StatblockViewer({ statblock, onClose, onEdit }) {
   );
 }
 
-/**
- * Collapsible Section Component
- */
 function Section({ title, icon, expanded, onToggle, children }) {
   return (
     <div className="statblock-section">
@@ -242,14 +339,15 @@ function Section({ title, icon, expanded, onToggle, children }) {
   );
 }
 
-/**
- * Ability/Action Content Component
- */
 function AbilityContent({ ability }) {
+  const description = ability.description ?? ability.desc
   return (
     <div className="ability-content">
       <strong className="ability-name">{ability.name}.</strong>
-      <span className="ability-description">{ability.description}</span>
+      {' '}
+      <span className="ability-description">
+        {parseTextToElements(description)}
+      </span>
       {ability.usage && (
         <span className="ability-usage">
           {' '}({formatUsage(ability.usage)})
@@ -260,19 +358,25 @@ function AbilityContent({ ability }) {
 }
 
 function formatUsage(usage) {
+  if (!usage || !usage.type) return '';
   switch (usage.type) {
     case 'recharge':
       return `Recharge ${usage.value || '6'}`;
     case 'perDay':
+    case 'per day':
       return `${usage.value}/day`;
     case 'once':
       return 'Once';
     case 'shortRest':
+    case 'short rest':
       return 'Short rest';
     case 'longRest':
+    case 'long rest':
       return 'Long rest';
     case 'rechargeShort':
       return 'Recharge after short or long rest';
+    case 'none':
+      return '';
     default:
       return '';
   }

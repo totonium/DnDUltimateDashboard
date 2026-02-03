@@ -1,21 +1,12 @@
 /**
  * Authentication Service
- * Handles Firebase authentication operations for the DnD Dashboard
+ * Handles JWT authentication operations for the DnD Dashboard
  *
  * @module services/authService
  */
 
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updateProfile
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { apiService } from './apiClient';
 import { db } from '../db';
-import { syncService } from './sync';
 
 /**
  * AuthService class for managing user authentication
@@ -23,86 +14,156 @@ import { syncService } from './sync';
  */
 class AuthService {
   constructor() {
-    this.unsubscribe = null;
+    this.tokenRefreshTimer = null;
   }
 
   /**
-   * Initialize authentication state listener
-   * @returns {Function} Unsubscribe function
+   * Initialize authentication state
+   * @returns {Promise<object|null>} Current user or null
    */
-  init() {
-    return new Promise((resolve) => {
-      this.unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          // Store user in IndexedDB for offline access
-          await db.settings.put({
-            key: 'currentUser',
-            value: {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL
-            }
-          });
-          // Trigger full sync with Firestore
-          await syncService.initialize(user.uid);
+  async init() {
+    try {
+      const user = await db.userProfile.get('currentUser');
+      if (user?.token) {
+        // Validate token by calling /me endpoint
+        const currentUser = await this.getCurrentUser();
+        if (currentUser) {
+          return currentUser;
         } else {
-          await db.settings.delete('currentUser');
+          // Token is invalid, clear it
+          await this.logout();
+          return null;
         }
-        resolve(user);
-      });
-    });
+      }
+      return null;
+    } catch (error) {
+      console.warn('Auth initialization failed:', error);
+      return null;
+    }
   }
 
   /**
    * Sign up a new user with email and password
    * @param {string} email - User email
    * @param {string} password - User password
-   * @param {string} displayName - Optional display name
-   * @returns {Promise<object>} User credential
+   * @returns {Promise<object>} Auth response
    */
-  async signUp(email, password, displayName = null) {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  async signUp(email, password) {
+    try {
+      const response = await apiService.post('/v1/auth/register', {
+        email,
+        password
+      });
 
-    if (displayName) {
-      await updateProfile(userCredential.user, { displayName });
-    }
-
-    await db.settings.put({
-      key: 'currentUser',
-      value: {
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName
+      if (response.token) {
+        await this.saveSession(response.token, email);
       }
-    });
 
-    return userCredential;
+      return response;
+    } catch (error) {
+      console.error('Sign up failed:', error);
+      throw error;
+    }
   }
 
   /**
    * Sign in an existing user
    * @param {string} email - User email
    * @param {string} password - User password
-   * @returns {Promise<object>} User credential
+   * @returns {Promise<object>} Auth response
    */
   async signIn(email, password) {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    try {
+      const response = await apiService.post('/v1/auth/login', {
+        email,
+        password
+      });
 
-    // Initialize sync after successful login
-    await syncService.initialize(userCredential.user.uid);
+      if (response.token) {
+        await this.saveSession(response.token, email);
+      }
 
-    return userCredential;
+      return response;
+    } catch (error) {
+      console.error('Sign in failed:', error);
+      throw error;
+    }
   }
 
   /**
    * Sign out the current user
    * @returns {Promise<void>}
    */
-  async signOut() {
-    await syncService.cleanup();
-    await signOut(auth);
-    await db.settings.delete('currentUser');
+  async logout() {
+    try {
+      await db.userProfile.delete('currentUser');
+      await db.syncQueue.clear();
+      if (this.tokenRefreshTimer) {
+        clearTimeout(this.tokenRefreshTimer);
+        this.tokenRefreshTimer = null;
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }
+
+  /**
+   * Get the current authenticated user
+   * @returns {Promise<object|null>} Current user or null
+   */
+  async getCurrentUser() {
+    try {
+      const response = await apiService.get('/v1/auth/me');
+      return response;
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if user is authenticated
+   * @returns {Promise<boolean>}
+   */
+  async isAuthenticated() {
+    try {
+      const user = await db.userProfile.get('currentUser');
+      return !!user?.token;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get the current JWT token
+   * @returns {Promise<string|null>}
+   */
+  async getToken() {
+    try {
+      const user = await db.userProfile.get('currentUser');
+      return user?.token || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Save session to IndexedDB
+   * @param {string} token - JWT token
+   * @param {string} email - User email
+   * @returns {Promise<void>}
+   */
+  async saveSession(token, email) {
+    try {
+      await db.userProfile.put({
+        key: 'currentUser',
+        token,
+        email,
+        loginTime: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to save session:', error);
+    }
   }
 
   /**
@@ -111,41 +172,21 @@ class AuthService {
    * @returns {Promise<void>}
    */
   async resetPassword(email) {
-    await sendPasswordResetEmail(auth, email);
+    try {
+      await apiService.post('/v1/auth/reset-password', { email });
+    } catch (error) {
+      console.error('Password reset failed:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get the current authenticated user
-   * @returns {object|null} Current user or null
-   */
-  getCurrentUser() {
-    return auth.currentUser;
-  }
-
-  /**
-   * Check if user is authenticated
-   * @returns {boolean}
-   */
-  isAuthenticated() {
-    return !!auth.currentUser;
-  }
-
-  /**
-   * Get the current user ID
-   * @returns {string|null}
-   */
-  async getCurrentUserId() {
-    const user = await db.settings.get('currentUser');
-    return user?.value?.uid || auth.currentUser?.uid || null;
-  }
-
-  /**
-   * Clean up the auth listener
+   * Clean up the auth service
    */
   cleanup() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+    if (this.tokenRefreshTimer) {
+      clearTimeout(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
     }
   }
 }

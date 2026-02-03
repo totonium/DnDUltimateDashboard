@@ -6,7 +6,7 @@ db.version(1).stores({
   encounters: '++id, name, createdAt, active',
   combatants: '++id, encounterId, name, initiative, *abilities, *statusEffects',
   statusEffects: '++id, name, description, duration, expiresAt',
-  statblocks: '++id, name, type, cr, *abilities, *tags, source, createdAt, updatedAt',
+  statblocks: '++id, name, type, challengeRating, cr, scores, *abilities, source, createdAt, updatedAt',
   audioTracks: '++id, name, type, playlistId, *tags, duration, createdAt',
   playlists: '++id, name, description, createdAt',
   playlistTracks: '++id, playlistId, trackId, order',
@@ -21,6 +21,14 @@ db.version(1).stores({
 export async function clearAllData() {
   await db.delete()
   await db.open()
+}
+
+// Clear and reinitialize database for schema updates
+export async function reinitializeDatabase() {
+  console.log('Reinitializing database for schema update...')
+  await db.delete()
+  await db.open()
+  console.log('Database reinitialized with new schema')
 }
 
 export async function getStorageUsage() {
