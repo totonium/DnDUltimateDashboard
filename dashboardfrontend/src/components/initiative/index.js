@@ -11,3 +11,5 @@ export { CombatantCard } from './CombatantCard';
 export { TurnControls } from './TurnControls';
 export { DamageModal } from './DamageModal';
 export { AddCombatantModal } from './AddCombatantModal';
+export { AbilityReminderCard } from './AbilityReminderCard';
+export { ReactiveAbilitiesCard } from './ReactiveAbilitiesCard';

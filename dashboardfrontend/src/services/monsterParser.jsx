@@ -295,6 +295,17 @@ function parseMythicTrait(data) {
   }
 }
 
+function parseMythicActions(data) {
+  if (!data.isMythic || !data.mythics || !Array.isArray(data.mythics)) {
+    return []
+  }
+
+  return data.mythics.map(action => ({
+    name: action.name,
+    description: action.desc
+  }))
+}
+
 function parseRegionalEffects(data) {
   if (!data.isRegional) return null
 
@@ -409,7 +420,7 @@ export function parseMonsterFile(content) {
     legendaryActions: parseLegendaryActions(data),
     lairActions: parseLairActions(data),
     mythicTrait: parseMythicTrait(data),
-    mythicActions: [],
+    mythicActions: parseMythicActions(data),
     regionalEffects: parseRegionalEffects(data),
 
     source: 'monster-file',
@@ -481,6 +492,13 @@ export function parseMonsterFile(content) {
     if (statblock.mythicTrait.description) {
       statblock.mythicTrait.description = parseTetraCubeText(statblock.mythicTrait.description, statblock)
     }
+  }
+
+  if (statblock.mythicActions && Array.isArray(statblock.mythicActions)) {
+    statblock.mythicActions = statblock.mythicActions.map(action => ({
+      ...action,
+      description: action.description ? parseTetraCubeText(action.description, statblock) : ''
+    }))
   }
 
   if (statblock.regionalEffects && typeof statblock.regionalEffects === 'object') {

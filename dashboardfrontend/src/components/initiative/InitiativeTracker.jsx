@@ -5,12 +5,13 @@
  * @module components/initiative/InitiativeTracker
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useInitiativeStore } from '../../stores/initiative';
 import { useUIStore } from '../../stores/ui';
 import { CombatantList } from './CombatantList';
 import { TurnControls } from './TurnControls';
 import { AbilityReminderCard } from './AbilityReminderCard';
+import { ReactiveAbilitiesCard } from './ReactiveAbilitiesCard';
 import { DamageModal } from './DamageModal';
 import './InitiativeTracker.css';
 
@@ -30,6 +31,8 @@ export function InitiativeTracker() {
   } = useInitiativeStore();
 
   const { sidebarOpen, modals, openModal, closeModal } = useUIStore();
+
+  const [showOtherCombatants, setShowOtherCombatants] = useState(true);
 
   // Check if damage modal is open
   const damageModalOpen = modals.some(m => m.id === 'damage');
@@ -90,7 +93,11 @@ export function InitiativeTracker() {
       {showAbilityReminders && currentTurnIndex < combatants.length && (
         <AbilityReminderCard
           combatant={combatants[currentTurnIndex]}
-          onClose={() => {}}
+        />
+      )}
+
+      {showOtherCombatants && combatants.length > 1 && (
+        <ReactiveAbilitiesCard
         />
       )}
 

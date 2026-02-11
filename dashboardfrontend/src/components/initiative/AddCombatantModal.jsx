@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useInitiativeStore } from '../../stores/initiative';
+import { useStatblockStore } from '../../stores/statblocks';
 import { X } from 'lucide-react';
 import './AddCombatantModal.css';
 
 export function AddCombatantModal({ onClose }) {
   const { addCombatant } = useInitiativeStore();
+  const { statblocks, loadStatblocks, getStatblockById } = useStatblockStore();
   const [formData, setFormData] = useState({
     name: '',
     initiative: 0,
@@ -12,8 +14,39 @@ export function AddCombatantModal({ onClose }) {
     maxHP: 1,
     type: '',
     ac: 10,
-    notes: ''
+    notes: '',
+    statblockId: ''
   });
+  const [selectedStatblock, setSelectedStatblock] = useState(null);
+
+  useEffect(() => {
+    loadStatblocks();
+  }, [loadStatblocks]);
+
+  const handleStatblockSelect = (e) => {
+    const statblockId = e.target.value;
+    const statblock = getStatblockById(statblockId);
+    
+    setFormData(prev => ({
+      ...prev,
+      statblockId
+    }));
+    
+    setSelectedStatblock(statblock || null);
+    
+    // Auto-fill combatant data from statblock if available
+    if (statblock) {
+      setFormData(prev => ({
+        ...prev,
+        name: statblock.name || prev.name,
+        type: statblock.type || prev.type,
+        ac: statblock.ac || prev.ac,
+        hp: statblock.hp || prev.maxHP,
+        maxHP: parseInt(statblock.hp) || prev.maxHP,
+        currentHP: parseInt(statblock.hp) || prev.currentHP
+      }));
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -34,7 +67,8 @@ export function AddCombatantModal({ onClose }) {
       maxHP: parseInt(formData.maxHP) || 1,
       type: formData.type,
       ac: parseInt(formData.ac) || 10,
-      notes: formData.notes
+      notes: formData.notes,
+      statblockId: formData.statblockId || null
     });
     onClose();
   };
@@ -50,6 +84,28 @@ export function AddCombatantModal({ onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} className="add-combatant-form">
+          <div className="form-group">
+            <label htmlFor="statblockId">Link Statblock (Optional)</label>
+            <select
+              id="statblockId"
+              name="statblockId"
+              value={formData.statblockId}
+              onChange={handleStatblockSelect}
+            >
+              <option value="">-- Select a statblock --</option>
+              {statblocks.map(statblock => (
+                <option key={statblock.id} value={statblock.id}>
+                  {statblock.name} ({statblock.type || 'Unknown type'})
+                </option>
+              ))}
+            </select>
+            {selectedStatblock && (
+              <p className="statblock-info">
+                Auto-filled stats from: {selectedStatblock.name}
+              </p>
+            )}
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="name">Name *</label>

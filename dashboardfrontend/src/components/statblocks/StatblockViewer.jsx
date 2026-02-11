@@ -5,13 +5,22 @@
  * @module components/statblocks/StatblockViewer
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronUp, Copy, Trash2 } from 'lucide-react';
 import { useStatblockStore } from '../../stores/statblocks';
 import { parseTextToElements } from '../../services/monsterParser.jsx';
 import './StatblockViewer.css';
 
 export function StatblockViewer({ statblock, onClose }) {
+  // Close on escape key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   const [expandedSections, setExpandedSections] = useState({
     abilities: true,
     actions: true,
@@ -302,6 +311,13 @@ export function StatblockViewer({ statblock, onClose }) {
           >
             {statblock.mythicTrait.description && (
               <p className="mythic-description">{parseTextToElements(statblock.mythicTrait.description)}</p>
+            )}
+            {statblock.mythicActions && statblock.mythicActions.length > 0 && (
+              <div className="mythic-actions">
+                {statblock.mythicActions.map((action, i) => (
+                  <AbilityContent key={i} ability={action} />
+                ))}
+              </div>
             )}
           </Section>
         )}

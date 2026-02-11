@@ -7,8 +7,10 @@
 
 import { useState } from 'react';
 import { useInitiativeStore } from '../../stores/initiative';
+import { useStatblockStore } from '../../stores/statblocks';
 import { Shield, Sword, Eye, EyeOff, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { StatblockViewer } from '../statblocks/StatblockViewer';
 import './CombatantCard.css';
 
 /**
@@ -19,10 +21,16 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState(false);
   const [initiativeValue, setInitiativeValue] = useState(combatant.initiative);
+  const [showStatblockViewer, setShowStatblockViewer] = useState(false);
 
   const { selectedCombatantId, removeCombatant, updateCombatant } = useInitiativeStore();
+  const { getStatblockById } = useStatblockStore();
 
   const isSelected = selectedCombatantId === combatant.id;
+  
+  // Get the linked statblock if it exists
+  const linkedStatblock = combatant.statblockId ? getStatblockById(combatant.statblockId) : null;
+  const hasLinkedStatblock = !!linkedStatblock;
 
   // Calculate HP percentage
   const hpPercent = Math.min(100, Math.max(0, (combatant.currentHP / combatant.maxHP) * 100));
@@ -70,6 +78,16 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
   const handleStatusEffectClick = (effect) => {
     // Placeholder for status effect details
     console.log('Status effect:', effect);
+  };
+
+  const handleCombatantClick = () => {
+    if (hasLinkedStatblock) {
+      setShowStatblockViewer(true);
+    }
+  };
+
+  const handleCloseStatblockViewer = () => {
+    setShowStatblockViewer(false);
   };
 
   return (
@@ -137,14 +155,25 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
                   <span className="hp-max">{combatant.maxHP}</span>
                 </div>
               </div>
-              <div className="hp-actions">
-                <button
-                  className="hp-btn damage"
-                  onClick={onOpenDamageModal}
-                  title="Apply Damage/Healing"
-                >
-                  <Sword size={14} />
-                </button>
+              <div className='hp buttons'>
+                <div className="hp-actions">
+                  <button
+                    className="hp-btn damage"
+                    onClick={onOpenDamageModal}
+                    title="Apply Damage/Healing"
+                  >
+                    <Sword size={14} />
+                  </button>
+                </div>
+
+                {/* Statblock indicator */}
+                {hasLinkedStatblock && (
+                  <div className="" title="Click to view statblock">
+                    <button className="btn-secondary statblock-indicator" onClick={handleCombatantClick}>
+                      <Eye size={16}  />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -257,6 +286,14 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
         confirmText="Remove"
         cancelText="Cancel"
       />
+
+      {/* Statblock Viewer Modal */}
+      {showStatblockViewer && linkedStatblock && (
+        <StatblockViewer
+          statblock={linkedStatblock}
+          onClose={handleCloseStatblockViewer}
+        />
+      )}
     </div>
   );
 }

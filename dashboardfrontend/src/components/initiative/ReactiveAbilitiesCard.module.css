@@ -1,14 +1,14 @@
-/* Ability Reminder Card Styles */
+/* Other Combatants Abilities Card Styles */
 @import '../../styles/variables.css';
 @import '../../styles/utilities.css';
 
-.abilityReminderCard {
+.abilitiesCard {
   position: fixed;
-  right: var(--space-4);
+  left: calc(var(--space-4) + 256px);
   top: 100px;
-  width: 320px;
+  width: 300px;
   background: var(--bg-card);
-  border: 2px solid var(--color-secondary);
+  border: 2px solid var(--color-warning);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
@@ -18,19 +18,39 @@
   flex-direction: column;
 }
 
+.abilitiesCard.sidebarCollapsed {
+  left: calc(var(--space-4) + 80px);
+}
+
+@media (max-width: 1023px) {
+  .abilitiesCard {
+    left: var(--space-4);
+  }
+}
+
 .collapsed {
   width: 200px;
-  right: var(--space-4);
+  left: calc(var(--space-4) + 256px);
   top: auto;
   bottom: var(--space-4);
 }
 
-.reminderHeader {
+.collapsed.sidebarCollapsed {
+  left: calc(var(--space-4) + 80px);
+}
+
+@media (max-width: 1023px) {
+  .collapsed {
+    left: var(--space-4);
+  }
+}
+
+.cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-dark));
+  background: linear-gradient(135deg, var(--color-warning), #d97706);
   background-clip: padding-box;
   color: var(--bg-primary);
   cursor: pointer;
@@ -47,8 +67,8 @@
   font-size: var(--text-sm);
 }
 
-.turnBadge {
-  background: var(--overlay-light);
+.countBadge {
+  background: rgba(255, 255, 255, 0.2);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
@@ -73,106 +93,95 @@
   opacity: 1;
 }
 
-.reminderContent {
+.cardContent {
   padding: var(--space-4);
   overflow-y: auto;
   flex: 1;
 }
 
-.abilitiesSection,
+.combatantSection {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.combatantSection:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.combatantName {
+  margin: 0 0 var(--space-3) 0;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
 .reactionsSection,
 .legendarySection,
 .mythicSection {
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
-.abilitiesSection h4,
-.reactionsSection h4,
-.legendarySection h4,
-.mythicSection h4 {
+.reactionsSection h5,
+.legendarySection h5,
+.mythicSection h5 {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-2) 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.highlight {
-  background: rgba(255, 100, 100, 0.1);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--color-error);
+.reactionsSection h5 {
+  color: var(--color-error);
 }
 
-.abilityItem {
+.legendarySection h5 {
+  color: var(--color-warning);
+}
+
+.mythicSection h5 {
+  color: var(--color-mythic, #9b59b6);
+}
+
+.abilityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.abilityPreview {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  width: 100%;
   padding: var(--space-2);
-  margin-bottom: var(--space-1);
   background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  position: relative;
-}
-
-.abilityItemHighlight {
-  border-left: 3px solid var(--color-error);
-}
-
-.abilityItemUsed {
-  opacity: 0.5;
-}
-
-.toggleBtn {
-  padding: var(--space-1) var(--space-2);
-  border: none;
+  border: 1px solid var(--border-primary);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: var(--text-xs);
   transition: all var(--transition-fast);
-  min-width: 50px;
+  text-align: left;
 }
 
-.available .toggleBtn {
-  background: var(--color-secondary);
-  color: var(--bg-primary);
-}
-
-.used .toggleBtn {
+.abilityPreview:hover {
   background: var(--bg-secondary);
-  color: var(--text-muted);
-}
-
-.abilityInfo {
-  flex: 1;
+  border-color: var(--color-secondary);
 }
 
 .abilityName {
-  font-weight: var(--font-medium);
   font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
 }
 
 .abilityUsage {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  margin-left: var(--space-2);
-}
-
-.infoBtn {
-  padding: var(--space-1);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: color var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.infoBtn:hover {
-  color: var(--color-secondary);
 }
 
 .noAbilities {

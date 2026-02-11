@@ -24,38 +24,43 @@
 - [X] Create .env.example file
 - [X] Add environment type declarations
 - [X] Set up Spring Boot project
-- [ ] Configure PostgreSQL database
 
 ### Phase 2 - Initiative Tracker (Upcoming)
 
-- Combatant management
-- Turn tracking with ability reminders
-- HP/status effect tracking
+- [x] Combatant management
+- [x] Turn tracking with ability reminders
+- [x] HP/status effect tracking
 
-### Phase 3 - Music & SFX (Upcoming)
+### Phase 3 - Statblock Library (Upcoming)
 
-- Audio player with playlists
-- SFX triggers
-- Volume controls
+- [x] Tetra Cube import
+- [ ] SRD bulk import
+- [x] Full statblock viewer
 
-### Phase 4 - Statblock Library (Upcoming)
+### Phase 4 - Music & SFX (Upcoming)
 
-- Tetra Cube import
-- SRD bulk import
-- Full statblock viewer
+- [ ] Audio player with playlists
+- [ ] SFX triggers
+- [ ] Volume controls
 
-### Phase 5 - Obsidian Reader (Upcoming)
+### Phase 5 - Backend integration (Upcoming)
 
-- Vault folder selection
-- Markdown rendering
-- File navigation
+- [ ] API
+- [ ] Configure PostgreSQL database
+- [ ] frontend connection
 
-### Phase 6 - Player Mode (Future)
+### Phase 6 - Obsidian Reader (Upcoming)
+
+- [ ] Vault folder selection
+- [ ] Markdown rendering
+- [ ] File navigation
+
+### Phase 7 - Player Mode (Future)
 
 - Character sheet view
 - Spell browser with hover tooltips
 
-### Phase 7 - AI DM Assistant (Future)
+### Phase 8 - AI DM Assistant (Future)
 
 - Spring AI integration
 - OpenAI/Anthropic API gateway

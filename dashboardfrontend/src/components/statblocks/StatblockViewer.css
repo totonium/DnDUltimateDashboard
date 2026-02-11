@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
   padding: var(--space-8);
   overflow-y: auto;
 }
@@ -266,6 +266,7 @@
 .legendary-description,
 .lair-description,
 .mythic-description,
+.mythic-actions-header,
 .regional-description {
   font-size: var(--text-sm);
   color: var(--text-secondary);
@@ -273,6 +274,10 @@
   padding: var(--space-2);
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
+}
+
+.mythic-actions {
+  margin-top: var(--space-3);
 }
 
 .regional-end {

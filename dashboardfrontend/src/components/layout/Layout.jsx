@@ -23,7 +23,9 @@ export function Layout() {
 
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden">
-      <Sidebar />
+      <div className="flex-none h-full">
+        <Sidebar />
+      </div>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
