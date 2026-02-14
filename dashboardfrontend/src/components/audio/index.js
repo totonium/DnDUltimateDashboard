@@ -7,4 +7,5 @@
 
 export { AudioLibrary } from './AudioLibrary';
 export { MusicPlayer } from './MusicPlayer';
-export { SFXPanel } from './SFXPanel';
+export { PlaylistManager } from './PlaylistManager';
+export { UploadAudioModal } from './UploadAudioModal';

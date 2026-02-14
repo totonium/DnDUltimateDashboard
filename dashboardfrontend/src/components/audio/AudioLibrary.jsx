@@ -1,32 +1,67 @@
-/**
- * Audio Library Component
- * Library browser for managing audio tracks
- *
- * @module components/audio/AudioLibrary
- */
-
 import { useState, useEffect } from 'react';
 import { useAudioStore } from '../../stores/audio';
 import { MusicPlayer } from './MusicPlayer';
 import { SFXPanel } from './SFXPanel';
-import { Upload, Folder, Music, Volume2, Search, Filter } from 'lucide-react';
-// import './AudioLibrary.css';
+import { PlaylistManager } from './PlaylistManager';
+import { UploadAudioModal } from './UploadAudioModal';
+import { Upload, Folder, Music, Volume2, Play, Clock, Disc, Trash2 } from 'lucide-react';
+import './AudioLibrary.css';
 
-/**
- * AudioLibrary - Main audio management component
- */
 export function AudioLibrary() {
-  const [activeTab, setActiveTab] = useState('music'); // 'music', 'sfx', 'playlists'
+  const [activeTab, setActiveTab] = useState('now-playing');
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const { musicVolume, sfxVolume, muted, toggleMute, setMusicVolume, setSFXVolume } = useAudioStore();
+  const {
+    musicVolume,
+    sfxVolume,
+    muted,
+    toggleMute,
+    setMusicVolume,
+    setSFXVolume,
+    loadAudioTracks,
+    loadPlaylists,
+    audioTracks,
+    deleteAudioTrack,
+    playTrack,
+    currentTrackId,
+    isPlaying
+  } = useAudioStore();
+
+  useEffect(() => {
+    loadAudioTracks();
+    loadPlaylists();
+  }, [loadAudioTracks, loadPlaylists]);
 
   const tabs = [
-    { id: 'music', label: 'Music', icon: Music },
+    { id: 'now-playing', label: 'Now Playing', icon: Disc },
+    { id: 'music', label: 'Music Library', icon: Music },
     { id: 'sfx', label: 'Sound Effects', icon: Volume2 },
     { id: 'playlists', label: 'Playlists', icon: Folder }
   ];
+
+  const musicTracks = audioTracks.filter(t => t.type === 'music' || t.type === 'atmosphere');
+  const filteredMusicTracks = musicTracks.filter(track =>
+    track.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleDeleteTrack = async (trackId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this track?')) {
+      await deleteAudioTrack(trackId);
+    }
+  };
+
+  const handleUploadComplete = () => {
+    loadAudioTracks();
+  };
 
   return (
     <div className="audio-library">
@@ -43,7 +78,6 @@ export function AudioLibrary() {
         </div>
       </header>
 
-      {/* Volume Controls */}
       <div className="volume-controls">
         <div className="volume-slider">
           <label>Music</label>
@@ -74,120 +108,127 @@ export function AudioLibrary() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="audio-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}
-            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+            className={`tab btn-text ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <tab.icon size={18} />
+            <tab.icon size={16} />
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Search and Filter */}
-      <div className="audio-search">
-        <Search size={18} />
-        <input
-          type="text"
-          placeholder="Search tracks..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <Filter size={18} />
-      </div>
-
-      {/* Content */}
       <div className="audio-content">
-        {activeTab === 'music' && <MusicPlayer />}
+        {activeTab === 'now-playing' && <MusicPlayer />}
+
+        {activeTab === 'music' && (
+          <div className="music-library">
+            <div className="music-library-header">
+              <h2 className="music-library-title">Music Library</h2>
+              <div className="music-search">
+                <input
+                  type="text"
+                  placeholder="Search songs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            {filteredMusicTracks.length > 0 ? (
+              <ul className="track-list-view">
+                {filteredMusicTracks.map((track, index) => (
+                  <li
+                    key={track.id}
+                    className={`track-list-item-view ${currentTrackId === track.id ? 'playing' : ''}`}
+                    onClick={() => playTrack(track.id)}
+                  >
+                    <span className="track-number">
+                      {currentTrackId === track.id && isPlaying ? (
+                        <div className="playing-indicator">
+                          <div className="playing-bar"></div>
+                          <div className="playing-bar"></div>
+                          <div className="playing-bar"></div>
+                        </div>
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <div className="track-artwork-small">
+                      <Music size={16} />
+                    </div>
+                    <div className="track-info-view">
+                      <span className="track-name-view">{track.name}</span>
+                      <span className="track-type-view">{track.type}</span>
+                    </div>
+                    <span className="track-duration-view">
+                      <Clock size={14} />
+                      {formatDuration(track.duration)}
+                    </span>
+                    <div className="track-actions-view">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Play"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playTrack(track.id);
+                        }}
+                      >
+                        <Play size={16} />
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm btn-danger"
+                        title="Delete"
+                        onClick={(e) => handleDeleteTrack(track.id, e)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-music-state">
+                <Music size={48} />
+                {searchQuery ? (
+                  <>
+                    <p>No songs found for "{searchQuery}"</p>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>No music tracks yet</p>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      <Upload size={16} />
+                      Upload Music
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'sfx' && <SFXPanel searchQuery={searchQuery} />}
-        {activeTab === 'playlists' && <PlaylistsView />}
+        {activeTab === 'playlists' && <PlaylistManager />}
       </div>
 
-      {/* Upload Modal Placeholder */}
       {showUploadModal && (
-        <UploadModal onClose={() => setShowUploadModal(false)} />
+        <UploadAudioModal
+          onClose={() => setShowUploadModal(false)}
+          onUploadComplete={handleUploadComplete}
+        />
       )}
-    </div>
-  );
-}
-
-/**
- * Playlists View Component
- */
-function PlaylistsView() {
-  return (
-    <div className="playlists-view">
-      <div className="empty-state">
-        <Folder size={48} />
-        <h3>No Playlists Yet</h3>
-        <p>Create a playlist to organize your audio tracks</p>
-        <button className="btn btn-primary">Create Playlist</button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Upload Modal Component
- */
-function UploadModal({ onClose }) {
-  const [dragActive, setDragActive] = useState(false);
-  const [category, setCategory] = useState('sfx');
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    // Handle file drop
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="upload-modal" onClick={e => e.stopPropagation()}>
-        <header className="modal-header">
-          <h2>Upload Audio</h2>
-          <button className="close-btn" onClick={onClose}>&times;</button>
-        </header>
-
-        <div
-          className={`drop-zone ${dragActive ? 'active' : ''}`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <Upload size={48} />
-          <p>Drag and drop audio files here</p>
-          <span>or</span>
-          <label className="btn btn-primary">
-            Browse Files
-            <input type="file" accept="audio/*" multiple hidden />
-          </label>
-        </div>
-
-        <div className="upload-options">
-          <label>Category</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="sfx">Sound Effects</option>
-            <option value="music">Music</option>
-            <option value="atmosphere">Atmosphere</option>
-          </select>
-        </div>
-      </div>
     </div>
   );
 }

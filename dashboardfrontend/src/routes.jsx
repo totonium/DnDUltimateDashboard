@@ -1,7 +1,7 @@
 import { createRouter, createRootRoute, createRoute, Outlet } from '@tanstack/react-router'
 import { Layout } from './components/layout'
 import { Sword, Scroll, Music, BookOpen, Users, Dices, Sparkles, LayoutDashboard, Shield, Package, FileText } from 'lucide-react'
-import { MusicPlayer } from './components/audio'
+import { AudioLibrary } from './components/audio'
 import { VaultBrowser } from './components/obsidian'
 import { InitiativeTracker } from './components/initiative'
 import { StatblockLibrary } from './components/statblocks'
@@ -191,7 +191,7 @@ const dmAudioRoute = createRoute({
   component: function Audio() {
     return (
       <div className="standard-page">
-        <MusicPlayer/>
+        <AudioLibrary/>
       </div>
       
     )

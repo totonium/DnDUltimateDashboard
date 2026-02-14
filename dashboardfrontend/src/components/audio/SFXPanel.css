@@ -111,6 +111,29 @@
   border-color: var(--color-secondary);
 }
 
+.sfx-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-8);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sfx-empty p {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+.sfx-empty span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .recent-sfx {
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-primary);
@@ -129,4 +152,60 @@
 .recent-empty {
   color: var(--text-muted);
   font-size: var(--text-sm);
+}
+
+.sfx-button-wrapper {
+  position: relative;
+}
+
+.sfx-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+  min-height: 80px;
+}
+
+.sfx-button:hover {
+  border-color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+.sfx-button:active {
+  transform: translateY(0);
+}
+
+.sfx-delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.sfx-button-wrapper:hover .sfx-delete-btn {
+  opacity: 1;
+}
+
+.sfx-delete-btn:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
 }
