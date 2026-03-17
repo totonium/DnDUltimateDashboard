@@ -24,9 +24,9 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const user = await db.userProfile.get('currentUser');
-      if (user?.token) {
-        config.headers.Authorization = `Bearer ${user.token}`;
+      const auth = await db.settings.get('auth');
+      if (auth?.token) {
+        config.headers.Authorization = `Bearer ${auth.token}`;
       }
     } catch (error) {
       console.warn('Failed to get auth token:', error);
@@ -43,7 +43,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear invalid session
       try {
-        await db.userProfile.delete('currentUser');
+        await db.settings.delete('auth');
       } catch (deleteError) {
         console.warn('Failed to clear user session:', deleteError);
       }
@@ -57,32 +57,32 @@ api.interceptors.response.use(
 // Generic CRUD operations
 export const apiService = {
   // GET
-  async get(endpoint, params = {}) {
-    const response = await api.get(endpoint, { params });
+  async get(endpoint, params = {}, config = {}) {
+    const response = await api.get(endpoint, { params, ...config });
     return response.data;
   },
 
   // POST
-  async post(endpoint, data) {
-    const response = await api.post(endpoint, data);
+  async post(endpoint, data = {}, config = {}) {
+    const response = await api.post(endpoint, data, config);
     return response.data;
   },
 
   // PUT
-  async put(endpoint, data) {
-    const response = await api.put(endpoint, data);
+  async put(endpoint, data, config = {}) {
+    const response = await api.put(endpoint, data, config);
     return response.data;
   },
 
   // PATCH
-  async patch(endpoint, data) {
-    const response = await api.patch(endpoint, data);
+  async patch(endpoint, data, config = {}) {
+    const response = await api.patch(endpoint, data, config);
     return response.data;
   },
 
   // DELETE
-  async delete(endpoint) {
-    const response = await api.delete(endpoint);
+  async delete(endpoint, config = {}) {
+    const response = await api.delete(endpoint, config);
     return response.data;
   }
 };

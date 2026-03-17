@@ -17,12 +17,29 @@ db.version(1).stores({
   cache: 'key, value, expiresAt'
 })
 
+db.version(2).stores({
+  encounters: '++id, name, createdAt, active',
+  combatants: '++id, encounterId, name, initiative, *abilities, *statusEffects',
+  statusEffects: '++id, name, description, duration, expiresAt',
+  statblocks: '++id, name, type, challengeRating, cr, scores, *abilities, source, createdAt, updatedAt',
+  audioTracks: 'id, name, type, *tags, duration, createdAt',
+  playlists: 'id, name, description, *trackIds, createdAt',
+  vaultFolders: '++id, path, name, parentId',
+  vaultFiles: '++id, folderId, path, name, contentHash, lastModified, createdAt, updatedAt',
+  vaultIndex: 'path, *tags, lastIndexed',
+  settings: 'key, value',
+  syncQueue: '++id, action, collection, data, createdAt, status',
+  cache: 'key, value, expiresAt',
+  devices: 'deviceId, name, platform, browser, approved, lastAccessedAt'
+}).upgrade(tx => {
+  return tx.table('devices').clear()
+})
+
 export async function clearAllData() {
   await db.delete()
   await db.open()
 }
 
-// Clear and reinitialize database for schema updates
 export async function reinitializeDatabase() {
   console.log('Reinitializing database for schema update...')
   await db.delete()
@@ -44,7 +61,8 @@ export async function getStorageUsage() {
     'vaultIndex',
     'settings',
     'syncQueue',
-    'cache'
+    'cache',
+    'devices'
   ]
   
   const usage = {}

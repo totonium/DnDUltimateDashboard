@@ -1,10 +1,46 @@
-import { createRouter, createRootRoute, createRoute, Outlet } from '@tanstack/react-router'
+import { createRouter, createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { Layout } from './components/layout'
-import { Sword, Scroll, Music, BookOpen, Users, Dices, Sparkles, LayoutDashboard, Shield, Package, FileText } from 'lucide-react'
+import { Sword, Scroll, Music, BookOpen, Users, Dices, Sparkles, LayoutDashboard, Shield, Package, FileText, LogIn } from 'lucide-react'
 import { AudioLibrary } from './components/audio'
 import { VaultBrowser } from './components/obsidian'
 import { InitiativeTracker } from './components/initiative'
 import { StatblockLibrary } from './components/statblocks'
+import { LoginPage } from './components/auth/LoginPage'
+import { DeviceManager } from './components/auth/DeviceManager'
+import { useAuthStore } from './stores/auth'
+
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuthStore()
+  const navigate = useNavigate()
+  
+  if (isLoading) {
+    return null
+  }
+  
+  if (!isAuthenticated) {
+    navigate({ to: '/login' })
+    return null
+  }
+  
+  return children
+}
+
+const PublicOnlyRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuthStore()
+  const navigate = useNavigate()
+  
+  if (isLoading) {
+    return null
+  }
+  
+  if (isAuthenticated) {
+    navigate({ to: '/dm/dashboard' })
+    return null
+  }
+  
+  return children
+}
 
 const RootComponent = () => {
   return (
@@ -16,6 +52,18 @@ const RootComponent = () => {
 
 const rootRoute = createRootRoute({
   component: RootComponent,
+})
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: function Login() {
+    return (
+      <PublicOnlyRoute>
+        <LoginPage />
+      </PublicOnlyRoute>
+    )
+  },
 })
 
 const indexRoute = createRoute({
@@ -94,21 +142,23 @@ const dmDashboardRoute = createRoute({
   path: '/dm/dashboard',
   component: function DmDashboard() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <LayoutDashboard size={40} className="text-primary" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <LayoutDashboard size={40} className="text-primary" />
+          </div>
+          <h1 className="standard-title">DM Dashboard</h1>
+          <p className="standard-description">
+            Your command center for running sessions. View party status, quick access to frequently used tools, and session overview.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-primary badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">DM Dashboard</h1>
-        <p className="standard-description">
-          Your command center for running sessions. View party status, quick access to frequently used tools, and session overview.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-primary badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -118,9 +168,11 @@ const dmCombatRoute = createRoute({
   path: '/dm/combat',
   component: function Combat() {
     return (
-      <div className="standard-page">
-        <InitiativeTracker />
-      </div>
+      <ProtectedRoute>
+        <div className="standard-page">
+          <InitiativeTracker />
+        </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -130,21 +182,23 @@ const dmItemsRoute = createRoute({
   path: '/dm/items',
   component: function Items() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Package size={40} className="text-gold" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Package size={40} className="text-gold" />
+          </div>
+          <h1 className="standard-title">Items & Treasure</h1>
+          <p className="standard-description">
+            Manage your treasure horde. Track magic items, mundane equipment, and loot distribution.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-gold badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Items & Treasure</h1>
-        <p className="standard-description">
-          Manage your treasure horde. Track magic items, mundane equipment, and loot distribution.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-gold badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -154,21 +208,23 @@ const dmSpellsRoute = createRoute({
   path: '/dm/spells',
   component: function DmSpells() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Scroll size={40} className="text-magic" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Scroll size={40} className="text-magic" />
+          </div>
+          <h1 className="standard-title">Spell Library</h1>
+          <p className="standard-description">
+            Your comprehensive spell reference. Browse spells by level, school, or class for quick lookup during sessions.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-magic badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Spell Library</h1>
-        <p className="standard-description">
-          Your comprehensive spell reference. Browse spells by level, school, or class for quick lookup during sessions.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-magic badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -178,9 +234,11 @@ const dmStatblocksRoute = createRoute({
   path: '/dm/statblocks',
   component: function Statblocks() {
     return (
-      <div className="standard-page">
-        <StatblockLibrary />
-      </div>
+      <ProtectedRoute>
+        <div className="standard-page">
+          <StatblockLibrary />
+        </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -190,10 +248,11 @@ const dmAudioRoute = createRoute({
   path: '/dm/audio',
   component: function Audio() {
     return (
-      <div className="standard-page">
-        <AudioLibrary/>
-      </div>
-      
+      <ProtectedRoute>
+        <div className="standard-page">
+          <AudioLibrary/>
+        </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -203,9 +262,11 @@ const dmNotesRoute = createRoute({
   path: '/dm/notes',
   component: function Notes() {
     return (
-      <div className="standard-page">
-        <VaultBrowser/>
-      </div>
+      <ProtectedRoute>
+        <div className="standard-page">
+          <VaultBrowser/>
+        </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -216,21 +277,23 @@ const playerDashboardRoute = createRoute({
   path: '/player/dashboard',
   component: function PlayerDashboard() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <LayoutDashboard size={40} className="text-primary" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <LayoutDashboard size={40} className="text-primary" />
+          </div>
+          <h1 className="standard-title">Player Dashboard</h1>
+          <p className="standard-description">
+            Your personal command center. Quick access to character stats, abilities, and party information.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-primary badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Player Dashboard</h1>
-        <p className="standard-description">
-          Your personal command center. Quick access to character stats, abilities, and party information.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-primary badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -240,21 +303,23 @@ const playerCharacterRoute = createRoute({
   path: '/player/character',
   component: function Character() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Users size={40} className="text-primary" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Users size={40} className="text-primary" />
+          </div>
+          <h1 className="standard-title">Your Character</h1>
+          <p className="standard-description">
+            Your character sheet, beautifully presented. Track abilities, inventory, and progression at a glance.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-primary badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Your Character</h1>
-        <p className="standard-description">
-          Your character sheet, beautifully presented. Track abilities, inventory, and progression at a glance.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-primary badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -264,21 +329,23 @@ const playerSpellsRoute = createRoute({
   path: '/player/spells',
   component: function Spells() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Dices size={40} className="text-magic" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Dices size={40} className="text-magic" />
+          </div>
+          <h1 className="standard-title">Spell Browser</h1>
+          <p className="standard-description">
+            Explore your magical repertoire. Browse spell descriptions, track prepared spells, and manage your spell slots.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-magic badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Spell Browser</h1>
-        <p className="standard-description">
-          Explore your magical repertoire. Browse spell descriptions, track prepared spells, and manage your spell slots.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-magic badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -288,21 +355,23 @@ const playerItemsRoute = createRoute({
   path: '/player/items',
   component: function PlayerItems() {
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Package size={40} className="text-gold" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Package size={40} className="text-gold" />
+          </div>
+          <h1 className="standard-title">Inventory</h1>
+          <p className="standard-description">
+            Track your character's belongings. Manage equipment, potions, and treasure.
+          </p>
+          <div className="mt-6">
+            <span className="badge badge-gold badge-lg">
+              <Sparkles size={14} className="mr-1" />
+              Coming Soon
+            </span>
+          </div>
         </div>
-        <h1 className="standard-title">Inventory</h1>
-        <p className="standard-description">
-          Track your character's belongings. Manage equipment, potions, and treasure.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-gold badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
@@ -312,27 +381,49 @@ const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
   component: function Settings() {
+    const { user, logout } = useAuthStore()
+    
     return (
-      <div className="standard-page">
-        <div className="standard-icon">
-          <Sparkles size={40} className="text-gold" />
+      <ProtectedRoute>
+        <div className="standard-page">
+          <div className="standard-icon">
+            <Sparkles size={40} className="text-gold" />
+          </div>
+          <h1 className="standard-title">Settings</h1>
+          <p className="standard-description">
+            Customize your dashboard experience. Manage devices, configure preferences, and account settings.
+          </p>
+          
+          <div className="settings-sections">
+            <section className="settings-section">
+              <h2>Account</h2>
+              <div className="settings-card">
+                <div className="settings-item">
+                  <div className="settings-item-info">
+                    <span className="settings-item-label">Email</span>
+                    <span className="settings-item-value">{user?.email || 'Not logged in'}</span>
+                  </div>
+                </div>
+                <button className="btn btn-danger" onClick={() => logout()}>
+                  <LogIn size={18} />
+                  Logout
+                </button>
+              </div>
+            </section>
+
+            <section className="settings-section">
+              <h2>Device Management</h2>
+              <DeviceManager />
+            </section>
+          </div>
         </div>
-        <h1 className="standard-title">Settings</h1>
-        <p className="standard-description">
-          Customize your dashboard experience. Configure themes, audio preferences, and connected services.
-        </p>
-        <div className="mt-6">
-          <span className="badge badge-gold badge-lg">
-            <Sparkles size={14} className="mr-1" />
-            Coming Soon
-          </span>
-        </div>
-      </div>
+      </ProtectedRoute>
     )
   },
 })
 
 const routeTree = rootRoute.addChildren([
+  loginRoute,
   indexRoute,
   dmDashboardRoute,
   dmCombatRoute,
