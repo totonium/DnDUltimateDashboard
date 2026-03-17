@@ -6,7 +6,7 @@ import './auth.css'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login, register, loginWithDevice, registerDevice, isLoading, error, clearError } = useAuthStore()
+  const { login, register, loginWithDevice, isLoading, error, clearError } = useAuthStore()
   
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -50,8 +50,12 @@ export function LoginPage() {
   const handleApprovalSubmit = async (e) => {
     e.preventDefault()
     try {
-      await registerDevice(approvalCode)
-      navigate({ to: '/' })
+      const response = await loginWithDevice(approvalCode)
+      if (response.approved) {
+        navigate({ to: '/' })
+      } else {
+        setShowApprovalInput(true)
+      }
     } catch (err) {
       console.error('Approval failed:', err)
     }

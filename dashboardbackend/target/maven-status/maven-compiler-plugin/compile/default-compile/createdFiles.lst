@@ -16,6 +16,7 @@ com\totonium\service\DeviceService.class
 com\totonium\service\EncounterService.class
 com\totonium\converter\JsonColumnConverter$3.class
 com\totonium\dto\CombatantDTO.class
+com\totonium\dto\DeviceLoginRequest.class
 com\totonium\dto\EncounterDTO.class
 com\totonium\repository\DeviceRepository.class
 com\totonium\dto\RegisterRequest.class

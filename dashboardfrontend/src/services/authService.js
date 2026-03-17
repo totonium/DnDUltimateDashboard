@@ -88,16 +88,13 @@ class AuthService {
     }
   }
 
-  async loginWithDevice() {
+  async loginWithDevice(approvalCode = null) {
     try {
       const deviceInfo = deviceUtils.getDeviceInfo()
       
       const response = await apiService.post('/v1/auth/device/login', {
-        deviceName: deviceInfo.name,
         deviceFingerprint: deviceInfo.deviceFingerprint,
-        deviceId: deviceInfo.deviceId,
-        platform: deviceInfo.platform,
-        browser: deviceInfo.browser
+        approvalCode
       })
 
       if (response.token && response.approved) {

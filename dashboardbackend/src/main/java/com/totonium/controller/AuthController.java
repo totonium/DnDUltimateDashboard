@@ -59,11 +59,11 @@ public class AuthController {
             
             if (!device.approved()) {
                 return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                        .body(new AuthResponse(null, "Device pending approval. Use approval code from an approved device.", null, null, device.id(), false));
+                        .body(new AuthResponse(null, "Device pending approval. Use approval code from an approved device.", device.id(), null, device.deviceId(), false));
             }
 
             String token = jwtService.generateToken(userId, request.deviceFingerprint());
-            return ResponseEntity.ok(new AuthResponse(token, null, userId, null, device.id(), true));
+            return ResponseEntity.ok(new AuthResponse(token, null, userId, null, device.deviceId(), true));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(new AuthResponse(null, e.getMessage(), null, null, null, false));
@@ -72,20 +72,12 @@ public class AuthController {
 
     @PostMapping("/device/login")
     @Operation(summary = "Login with device")
-    public ResponseEntity<AuthResponse> deviceLogin(@Valid @RequestBody DeviceRegisterRequest request) {
+    public ResponseEntity<AuthResponse> deviceLogin(@Valid @RequestBody DeviceLoginRequest request) {
         try {
-            User user = userRepository.findById(getCurrentUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            DeviceResponse device = deviceService.registerDevice(user.getId(), request);
+            DeviceResponse device = deviceService.loginWithDevice(request.deviceFingerprint(), request.approvalCode());
             
-            if (!device.approved()) {
-                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                        .body(new AuthResponse(null, "Device pending approval. Use approval code from an approved device.", null, null, device.id(), false));
-            }
-
-            String token = jwtService.generateToken(user.getId(), request.deviceFingerprint());
-            return ResponseEntity.ok(new AuthResponse(token, null, user.getId(), user.getEmail(), device.id(), true));
+            String token = jwtService.generateToken(device.userId(), request.deviceFingerprint());
+            return ResponseEntity.ok(new AuthResponse(token, null, device.userId(), null, device.deviceId(), true));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(new AuthResponse(null, e.getMessage(), null, null, null, false));

@@ -9,7 +9,7 @@ public record AuthResponse(
     @Nullable String message,
     @Nullable UUID id,
     @Nullable String email,
-    @Nullable UUID deviceId,
+    @Nullable String deviceId,
     boolean approved
 ) {
 }

@@ -158,6 +158,31 @@ public class DeviceService {
                 .orElse(false);
     }
 
+    public DeviceResponse loginWithDevice(String deviceFingerprint, String approvalCode) {
+        Optional<Device> deviceOpt = deviceRepository.findByDeviceFingerprint(deviceFingerprint);
+
+        if (deviceOpt.isEmpty()) {
+            throw new RuntimeException("Device not found. Please register your device first.");
+        }
+
+        Device device = deviceOpt.get();
+        
+        if (device.isApproved()) {
+            device.setLastAccessedAt(LocalDateTime.now());
+            return toResponse(deviceRepository.save(device));
+        }
+
+        if (approvalCode != null && validateApprovalCode(device, approvalCode)) {
+            device.setApproved(true);
+            device.setApprovalCode(null);
+            device.setApprovalCodeExpiresAt(null);
+            device.setLastAccessedAt(LocalDateTime.now());
+            return toResponse(deviceRepository.save(device));
+        }
+
+        throw new RuntimeException("Device not approved. Please enter the approval code from an approved device.");
+    }
+
     @Transactional
     public DeviceResponse trustCurrentDevice(UUID userId, String deviceFingerprint, String deviceId, String deviceName, String platform, String browser) {
         User user = userRepository.findById(userId)
@@ -213,6 +238,8 @@ public class DeviceService {
     private DeviceResponse toResponse(Device device) {
         return new DeviceResponse(
                 device.getId(),
+                device.getUser().getId(),
+                device.getDeviceId(),
                 device.getName(),
                 device.getPlatform(),
                 device.getBrowser(),

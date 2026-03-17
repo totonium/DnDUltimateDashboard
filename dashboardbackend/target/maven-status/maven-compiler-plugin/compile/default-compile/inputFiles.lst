@@ -17,6 +17,7 @@ C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\ja
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\AuthResponse.java
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\CombatantDTO.java
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\CreateCombatantRequest.java
+C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\DeviceLoginRequest.java
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\DeviceRegisterRequest.java
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\DeviceResponse.java
 C:\Users\thoma\Documenten\code\DnDUltimateDashboard\dashboardbackend\src\main\java\com\totonium\dto\DeviceTrustRequest.java

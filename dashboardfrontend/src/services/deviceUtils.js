@@ -7,6 +7,24 @@ function generateDeviceId() {
   return newId
 }
 
+function generateFingerprintValue(deviceId, platform, browser, screenRes, language) {
+  const fingerprintData = `${deviceId}|${platform}|${browser}|${screenRes}|${language}`
+  
+  let fingerprint = 0
+  for (let i = 0; i < fingerprintData.length; i++) {
+    const char = fingerprintData.charCodeAt(i)
+    fingerprint = ((fingerprint << 5) - fingerprint) + char
+    fingerprint = fingerprint >>> 0
+  }
+  
+  return Math.abs(fingerprint).toString(16)
+}
+
+function getDeviceFingerprint() {
+  const stored = localStorage.getItem('deviceFingerprint')
+  return stored
+}
+
 function getDeviceInfo() {
   const ua = navigator.userAgent
   
@@ -29,18 +47,15 @@ function getDeviceInfo() {
   
   const deviceId = generateDeviceId()
   
-  const fingerprintData = `${deviceId}|${platform}|${browser}|${screenRes}|${language}`
-  
-  let fingerprint = 0
-  for (let i = 0; i < fingerprintData.length; i++) {
-    const char = fingerprintData.charCodeAt(i)
-    fingerprint = ((fingerprint << 5) - fingerprint) + char
-    fingerprint = fingerprint & fingerprint
+  let deviceFingerprint = getDeviceFingerprint()
+  if (!deviceFingerprint) {
+    deviceFingerprint = generateFingerprintValue(deviceId, platform, browser, screenRes, language)
+    localStorage.setItem('deviceFingerprint', deviceFingerprint)
   }
   
   return {
     deviceId,
-    deviceFingerprint: Math.abs(fingerprint).toString(16),
+    deviceFingerprint,
     name: `${browser} on ${platform}`,
     platform,
     browser
@@ -48,14 +63,15 @@ function getDeviceInfo() {
 }
 
 function generateFingerprint() {
-  const info = getDeviceInfo()
-  return info.deviceFingerprint
+  const deviceInfo = getDeviceInfo()
+  return deviceInfo.deviceFingerprint
 }
 
 export const deviceUtils = {
   generateDeviceId,
   getDeviceInfo,
-  generateFingerprint
+  generateFingerprint,
+  getDeviceFingerprint
 }
 
 export default deviceUtils

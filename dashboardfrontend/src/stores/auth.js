@@ -71,10 +71,10 @@ export const useAuthStore = create(
         }
       },
 
-      loginWithDevice: async () => {
+      loginWithDevice: async (approvalCode = null) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await authService.loginWithDevice()
+          const response = await authService.loginWithDevice(approvalCode)
           if (response.token && response.approved) {
             set({ 
               user: { id: response.id, email: response.email },
