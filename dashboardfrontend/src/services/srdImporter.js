@@ -54,8 +54,8 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: [],
-    lairActions: [],
+    legendaryActions: null,
+    lairActions: null,
     mythicTrait: null,
     mythicActions: [],
     regionalEffects: null,
@@ -94,7 +94,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Orc',
@@ -133,7 +133,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Ogre',
@@ -172,7 +172,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Bandit Captain',
@@ -225,7 +225,7 @@ const srdMonsters = [
         usage: { type: 'reaction' }
       }
     ],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Guard',
@@ -257,7 +257,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Skeleton',
@@ -303,7 +303,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Priest',
@@ -342,7 +342,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Cultist',
@@ -381,7 +381,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   },
   {
     name: 'Young Red Dragon',
@@ -434,7 +434,7 @@ const srdMonsters = [
       }
     ],
     reactions: [],
-    legendaryActions: []
+    legendaryActions: null
   }
 ];
 

@@ -2,6 +2,7 @@ package com.totonium.controller;
 
 import com.totonium.dto.AudioDTO;
 import com.totonium.dto.UploadAudioRequest;
+import com.totonium.dto.UpdateAudioRequest;
 import com.totonium.service.AudioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +40,15 @@ public class AudioController {
     public ResponseEntity<Void> deleteTrack(@PathVariable UUID id) {
         audioService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/tracks/{id}")
+    @Operation(summary = "Update a track")
+    public ResponseEntity<AudioDTO> updateTrack(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateAudioRequest request) {
+        AudioDTO updated = audioService.update(id, request.name(), request.durationSeconds());
+        return ResponseEntity.ok(updated);
     }
 
     @GetMapping("/playlists")

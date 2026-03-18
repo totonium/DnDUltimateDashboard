@@ -210,7 +210,7 @@ function parseSpeed(data) {
 }
 
 function parseSenses(data) {
-  const senses = []
+  const senses = {}
   let passivePerception = 10
 
   if (data.blindsight && data.blindsight !== '0') {
@@ -229,7 +229,7 @@ function parseSenses(data) {
   passivePerception += Math.floor((parseInt(data.wisPoints) || 10 - 10) / 2)
 
   return {
-    senses,
+    object: senses,
     passivePerception
   }
 }
@@ -270,7 +270,7 @@ function parseReactions(data) {
 }
 
 function parseLegendaryActions(data) {
-  if (!data.isLegendary) return []
+  if (!data.isLegendary) return null
 
   return {
     description: data.legendariesDescription,

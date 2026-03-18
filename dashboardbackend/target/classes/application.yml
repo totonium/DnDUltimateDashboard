@@ -29,6 +29,10 @@ spring:
     serialization:
       write-dates-as-timestamps: false
     default-property-inclusion: non_null
+    mapper:
+      DEFAULT_VIEW_INCLUSION: false
+    serialization-inclusion:
+      NON_NULL
 
 # JWT Configuration
 app:

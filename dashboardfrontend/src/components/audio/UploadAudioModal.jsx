@@ -77,6 +77,7 @@ export function UploadAudioModal({ onClose, onUploadComplete }) {
         category: category,
         duration: audioData.duration || 0,
         blob: blob,
+        file: file, // Pass file to enable backend sync
         mimeType: file.type,
         size: file.size,
         tags: [],

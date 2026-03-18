@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public record DeviceResponse(
     UUID id,
+    UUID userId,
+    String deviceId,
     String name,
     String platform,
     String browser,

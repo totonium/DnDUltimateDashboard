@@ -82,6 +82,7 @@ export function PlaylistManager() {
   }, [selectedPlaylist, deletePlaylist, loadPlaylists])
 
   const handleAddTrack = useCallback(async (playlistId, trackId) => {
+    
     try {
       await addTrackToPlaylist(playlistId, trackId)
       await loadPlaylists()

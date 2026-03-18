@@ -267,7 +267,7 @@ export function StatblockViewer({ statblock, onClose }) {
           </Section>
         )}
 
-        {(statblock.legendaryActions?.length > 0 || statblock.legendaryActions.description) && (
+        {(statblock.legendaryActions?.length > 0 || statblock.legendaryActions?.description) && (
           <Section
             title="Legendary Actions"
             icon="👑"

@@ -21,4 +21,6 @@ public interface DeviceRepository extends JpaRepository<Device, UUID> {
     List<Device> findByUserAndApproved(User user, boolean approved);
 
     boolean existsByDeviceFingerprintAndApproved(String deviceFingerprint, boolean approved);
+
+    Optional<Device> findByDeviceFingerprint(String deviceFingerprint);
 }

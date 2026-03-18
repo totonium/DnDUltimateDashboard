@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from '@tanstack/react-router'
 import Sidebar from './Sidebar'
 import Header from './Header'
-import { useUIStore, useAuthStore } from '../../stores'
+import { useUIStore, useAuthStore, useStatblockStore, useAudioStore } from '../../stores'
 
 export function Layout() {
   const { theme } = useUIStore()
-  const { init } = useAuthStore()
+  const { init, isAuthenticated } = useAuthStore()
+  const { syncStatblocks } = useStatblockStore()
+  const { syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists } = useAudioStore()
   const location = useLocation()
 
   const isLoginPage = location.pathname === '/login'
@@ -23,6 +25,16 @@ export function Layout() {
       }
     }
   }, [init])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      syncStatblocks()
+      syncAudioTracks()
+      syncPlaylists()
+      loadAudioTracks()
+      loadPlaylists()
+    }
+  }, [isAuthenticated, syncStatblocks, syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists])
 
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden">

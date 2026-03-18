@@ -39,8 +39,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/device/trust").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/debug/**").permitAll()  // Debug endpoints - disable in production
+                .requestMatchers(HttpMethod.GET, "/api/v1/audio/*/stream").permitAll()
                 .requestMatchers("/api/v1/combatants/**").authenticated()
                 .requestMatchers("/api/v1/audio/**").authenticated()
+                .requestMatchers("/api/v1/playlists/**").authenticated()
                 .requestMatchers("/uploads/**").authenticated()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
