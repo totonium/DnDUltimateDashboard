@@ -5,7 +5,7 @@
  * @module components/statblocks/SRDImportModal
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { srdImporter } from '../../services/srdImporter';
 import './SRDImportModal.css';
@@ -18,9 +18,27 @@ export function SRDImportModal({ onClose }) {
   const [selectedMonsters, setSelectedMonsters] = useState([]);
   const [importStatus, setImportStatus] = useState('idle'); // 'idle', 'importing', 'complete'
   const [importResult, setImportResult] = useState(null);
+  const [availableMonsters, setAvailableMonsters] = useState([]);
+  const [monsterCount, setMonsterCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const availableMonsters = srdImporter.getAvailableMonsters();
-  const monsterCount = srdImporter.getMonsterCount();
+  useEffect(() => {
+    async function loadMonsters() {
+      try {
+        const [monsters, count] = await Promise.all([
+          srdImporter.getAvailableMonsters(),
+          srdImporter.getMonsterCount()
+        ]);
+        setAvailableMonsters(monsters);
+        setMonsterCount(count);
+      } catch (error) {
+        console.error('Failed to load SRD monsters:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadMonsters();
+  }, []);
 
   const filteredMonsters = availableMonsters.filter(name =>
     name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -120,7 +138,14 @@ export function SRDImportModal({ onClose }) {
         </header>
 
         <div className="modal-body">
-          {importStatus === 'idle' && (
+          {isLoading && (
+            <div className="loading-state">
+              <div className="spinner" />
+              <p>Loading SRD monsters...</p>
+            </div>
+          )}
+
+          {!isLoading && importStatus === 'idle' && (
             <>
               <div className="srd-info">
                 <p>

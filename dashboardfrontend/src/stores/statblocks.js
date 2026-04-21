@@ -75,6 +75,78 @@ export const useStatblockStore = create(
         }
       },
 
+      // Sync missing local statblocks to backend
+      syncMissingToBackend: async () => {
+        const { isSyncing } = get()
+        if (isSyncing) return
+
+        set({ isSyncing: true, syncError: null })
+        
+        try {
+          const localStatblocks = await db.statblocks.toArray()
+          const backendStatblocks = await statblockApiService.getAll()
+          const backendIds = new Set(backendStatblocks.map(s => s.id))
+          
+          const missingInBackend = localStatblocks.filter(s => !backendIds.has(s.id))
+          console.log(`Found ${missingInBackend.length} statblocks missing in backend`)
+          
+          let synced = 0
+          for (const statblock of missingInBackend) {
+            try {
+              const uploadData = [{
+                name: statblock.name,
+                size: statblock.size || null,
+                type: statblock.type || null,
+                alignment: statblock.alignment || null,
+                armorClass: statblock.armorClass ?? statblock.ac ?? null,
+                armorType: statblock.armorType ?? statblock.acNote ?? null,
+                hitPoints: statblock.hitPoints ?? statblock.hp ?? null,
+                hitDice: statblock.hitDice || null,
+                speed: statblock.speed || null,
+                scores: statblock.scores || null,
+                savingThrows: convertToArrayFormat(statblock.savingThrows),
+                skills: convertToArrayFormat(statblock.skills),
+                damageImmunities: statblock.damageImmunities || null,
+                damageResistances: statblock.damageResistances || null,
+                damageVulnerabilities: statblock.damageVulnerabilities || null,
+                conditionImmunities: statblock.conditionImmunities || null,
+                senses: statblock.senses || null,
+                passivePerception: statblock.passivePerception || null,
+                languages: statblock.languages || null,
+                challengeRating: statblock.challengeRating ?? statblock.cr ?? null,
+                xp: statblock.xp || null,
+                profBonus: statblock.profBonus || null,
+                abilities: statblock.abilities || null,
+                actions: statblock.actions || null,
+                reactions: statblock.reactions || null,
+                legendaryActions: statblock.legendaryActions || null,
+                lairActions: statblock.lairActions || null,
+                mythicTrait: statblock.mythicTrait || null,
+                mythicActions: statblock.mythicActions || null,
+                regionalEffects: statblock.regionalEffects || null,
+                tags: statblock.tags || [],
+                source: statblock.source || 'custom',
+                notes: statblock.notes || null,
+                isLocal: true
+              }]
+              const result = await statblockApiService.upload(uploadData)
+              if (result && result.length > 0) {
+                await db.statblocks.update(statblock.id, { id: result[0].id })
+                synced++
+              }
+            } catch (err) {
+              console.error(`Failed to sync "${statblock.name}":`, err)
+            }
+          }
+          
+          console.log(`Synced ${synced} statblocks to backend`)
+          set({ isSyncing: false })
+        } catch (error) {
+          console.error('Failed to sync missing statblocks:', error)
+          set({ syncError: error.message, isSyncing: false })
+        }
+      },
+
       // Queue operation for backend sync
       queueForSync: async (action, data) => {
         try {
@@ -127,12 +199,20 @@ export const useStatblockStore = create(
         const newStatblock = {
           id: uuidv4(),
           ...statblock,
+          // Ensure required fields have defaults
+          armorClass: statblock.armorClass ?? statblock.ac ?? 10,
+          hitPoints: statblock.hitPoints ?? statblock.hp ?? 10,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
         
         // Save to local database immediately
         await db.statblocks.add(newStatblock)
+        
+        // Update UI immediately (before backend sync)
+        set((state) => ({ 
+          statblocks: [...state.statblocks, newStatblock]
+        }))
         
         // Try to sync with backend
         try {
@@ -142,7 +222,7 @@ export const useStatblockStore = create(
             type: newStatblock.type || null,
             alignment: newStatblock.alignment || null,
             armorClass: newStatblock.armorClass ?? newStatblock.ac ?? null,
-            armorType: newStatblock.armorType || null,
+            armorType: newStatblock.armorType ?? newStatblock.acNote ?? null,
             hitPoints: newStatblock.hitPoints ?? newStatblock.hp ?? null,
             hitDice: newStatblock.hitDice || null,
             speed: newStatblock.speed || null,
@@ -175,7 +255,8 @@ export const useStatblockStore = create(
           const backendStatblock = await statblockApiService.upload(uploadData)
           
           if (backendStatblock && backendStatblock.length > 0) {
-            const updatedStatblock = { ...newStatblock, ...backendStatblock[0] }
+            const backendId = backendStatblock[0].id
+            const updatedStatblock = { ...newStatblock, ...backendStatblock[0], id: backendId }
             await db.statblocks.update(newStatblock.id, updatedStatblock)
             
             set((state) => ({ 
@@ -183,16 +264,14 @@ export const useStatblockStore = create(
             }))
             
             return updatedStatblock
+          } else {
+            throw new Error('Backend did not return a statblock after upload')
           }
         } catch (error) {
           console.error('Failed to sync statblock to backend:', error)
-          // Queue for later sync
           get().queueForSync('create', newStatblock)
         }
         
-        set((state) => ({ 
-          statblocks: [...state.statblocks, newStatblock]
-        }))
         return newStatblock
       },
 
@@ -238,43 +317,98 @@ export const useStatblockStore = create(
           
           // Try to sync with backend
           try {
-            const updateData = {
-              name: updatedStatblock.name,
-              size: updatedStatblock.size || null,
-              type: updatedStatblock.type || null,
-              alignment: updatedStatblock.alignment || null,
-              armorClass: updatedStatblock.armorClass ?? updatedStatblock.ac ?? null,
-              armorType: updatedStatblock.armorType || null,
-              hitPoints: updatedStatblock.hitPoints ?? updatedStatblock.hp ?? null,
-              hitDice: updatedStatblock.hitDice || null,
-              speed: updatedStatblock.speed || null,
-              scores: updatedStatblock.scores || null,
-              savingThrows: convertToArrayFormat(updatedStatblock.savingThrows),
-              skills: convertToArrayFormat(updatedStatblock.skills),
-              damageImmunities: updatedStatblock.damageImmunities || null,
-              damageResistances: updatedStatblock.damageResistances || null,
-              damageVulnerabilities: updatedStatblock.damageVulnerabilities || null,
-              conditionImmunities: updatedStatblock.conditionImmunities || null,
-              senses: updatedStatblock.senses || null,
-              passivePerception: updatedStatblock.passivePerception || null,
-              languages: updatedStatblock.languages || null,
-              challengeRating: updatedStatblock.challengeRating ?? updatedStatblock.cr ?? null,
-              xp: updatedStatblock.xp || null,
-              profBonus: updatedStatblock.profBonus || null,
-              abilities: updatedStatblock.abilities || null,
-              actions: updatedStatblock.actions || null,
-              reactions: updatedStatblock.reactions || null,
-              legendaryActions: updatedStatblock.legendaryActions || null,
-              lairActions: updatedStatblock.lairActions || null,
-              mythicTrait: updatedStatblock.mythicTrait || null,
-              mythicActions: updatedStatblock.mythicActions || null,
-              regionalEffects: updatedStatblock.regionalEffects || null,
-              tags: updatedStatblock.tags || [],
-              source: updatedStatblock.source || 'custom',
-              notes: updatedStatblock.notes || null,
-              isLocal: true
+            // First, check if statblock exists in backend by trying to fetch it
+            try {
+              await statblockApiService.getById(existing.id)
+              // Exists in backend - do update
+              const updateData = {
+                name: updatedStatblock.name,
+                size: updatedStatblock.size || null,
+                type: updatedStatblock.type || null,
+                alignment: updatedStatblock.alignment || null,
+                armorClass: updatedStatblock.armorClass ?? updatedStatblock.ac ?? null,
+                armorType: updatedStatblock.armorType ?? updatedStatblock.acNote ?? null,
+                hitPoints: updatedStatblock.hitPoints ?? updatedStatblock.hp ?? null,
+                hitDice: updatedStatblock.hitDice || null,
+                speed: updatedStatblock.speed || null,
+                scores: updatedStatblock.scores || null,
+                savingThrows: convertToArrayFormat(updatedStatblock.savingThrows),
+                skills: convertToArrayFormat(updatedStatblock.skills),
+                damageImmunities: updatedStatblock.damageImmunities || null,
+                damageResistances: updatedStatblock.damageResistances || null,
+                damageVulnerabilities: updatedStatblock.damageVulnerabilities || null,
+                conditionImmunities: updatedStatblock.conditionImmunities || null,
+                senses: updatedStatblock.senses || null,
+                passivePerception: updatedStatblock.passivePerception || null,
+                languages: updatedStatblock.languages || null,
+                challengeRating: updatedStatblock.challengeRating ?? updatedStatblock.cr ?? null,
+                xp: updatedStatblock.xp || null,
+                profBonus: updatedStatblock.profBonus || null,
+                abilities: updatedStatblock.abilities || null,
+                actions: updatedStatblock.actions || null,
+                reactions: updatedStatblock.reactions || null,
+                legendaryActions: updatedStatblock.legendaryActions || null,
+                lairActions: updatedStatblock.lairActions || null,
+                mythicTrait: updatedStatblock.mythicTrait || null,
+                mythicActions: updatedStatblock.mythicActions || null,
+                regionalEffects: updatedStatblock.regionalEffects || null,
+                tags: updatedStatblock.tags || [],
+                source: updatedStatblock.source || 'custom',
+                notes: updatedStatblock.notes || null,
+                isLocal: true
+              }
+              await statblockApiService.update(existing.id, updateData)
+            } catch (fetchError) {
+              // Statblock doesn't exist in backend - need to create it instead
+              console.warn(`Statblock ${existing.name} not in backend, re-creating...`, fetchError.message)
+              const createData = [{
+                name: updatedStatblock.name,
+                size: updatedStatblock.size || null,
+                type: updatedStatblock.type || null,
+                alignment: updatedStatblock.alignment || null,
+                armorClass: updatedStatblock.armorClass ?? updatedStatblock.ac ?? null,
+                armorType: updatedStatblock.armorType ?? updatedStatblock.acNote ?? null,
+                hitPoints: updatedStatblock.hitPoints ?? updatedStatblock.hp ?? null,
+                hitDice: updatedStatblock.hitDice || null,
+                speed: updatedStatblock.speed || null,
+                scores: updatedStatblock.scores || null,
+                savingThrows: convertToArrayFormat(updatedStatblock.savingThrows),
+                skills: convertToArrayFormat(updatedStatblock.skills),
+                damageImmunities: updatedStatblock.damageImmunities || null,
+                damageResistances: updatedStatblock.damageResistances || null,
+                damageVulnerabilities: updatedStatblock.damageVulnerabilities || null,
+                conditionImmunities: updatedStatblock.conditionImmunities || null,
+                senses: updatedStatblock.senses || null,
+                passivePerception: updatedStatblock.passivePerception || null,
+                languages: updatedStatblock.languages || null,
+                challengeRating: updatedStatblock.challengeRating ?? updatedStatblock.cr ?? null,
+                xp: updatedStatblock.xp || null,
+                profBonus: updatedStatblock.profBonus || null,
+                abilities: updatedStatblock.abilities || null,
+                actions: updatedStatblock.actions || null,
+                reactions: updatedStatblock.reactions || null,
+                legendaryActions: updatedStatblock.legendaryActions || null,
+                lairActions: updatedStatblock.lairActions || null,
+                mythicTrait: updatedStatblock.mythicTrait || null,
+                mythicActions: updatedStatblock.mythicActions || null,
+                regionalEffects: updatedStatblock.regionalEffects || null,
+                tags: updatedStatblock.tags || [],
+                source: updatedStatblock.source || 'custom',
+                notes: updatedStatblock.notes || null,
+                isLocal: true
+              }]
+              const result = await statblockApiService.upload(createData)
+              if (result && result.length > 0) {
+                const newId = result[0].id
+                const syncedStatblock = { ...updatedStatblock, id: newId }
+                await db.statblocks.update(existing.id, syncedStatblock)
+                set((state) => ({
+                  statblocks: state.statblocks.map(s => 
+                    s.id === existing.id ? syncedStatblock : s
+                  )
+                }))
+              }
             }
-            await statblockApiService.update(existing.id, updateData)
           } catch (error) {
             console.error('Failed to sync statblock update to backend:', error)
             get().queueForSync('update', updatedStatblock)
@@ -306,11 +440,42 @@ export const useStatblockStore = create(
         
         await db.statblocks.update(id, updatedData)
         
-        // Convert object fields to array format for backend
+        // Build backend data with only backend-valid fields (exclude frontend-only fields)
         const backendData = {
-          ...updatedData,
+          name: updatedData.name,
+          size: updatedData.size || null,
+          type: updatedData.type || null,
+          alignment: updatedData.alignment || null,
+          armorClass: updatedData.armorClass ?? updatedData.ac ?? null,
+          armorType: updatedData.armorType ?? updatedData.acNote ?? null,
+          hitPoints: updatedData.hitPoints ?? updatedData.hp ?? null,
+          hitDice: updatedData.hitDice || null,
+          speed: updatedData.speed || null,
+          scores: updatedData.scores || null,
           savingThrows: convertToArrayFormat(updatedData.savingThrows),
-          skills: convertToArrayFormat(updatedData.skills)
+          skills: convertToArrayFormat(updatedData.skills),
+          damageImmunities: updatedData.damageImmunities || null,
+          damageResistances: updatedData.damageResistances || null,
+          damageVulnerabilities: updatedData.damageVulnerabilities || null,
+          conditionImmunities: updatedData.conditionImmunities || null,
+          senses: updatedData.senses || null,
+          passivePerception: updatedData.passivePerception || null,
+          languages: updatedData.languages || null,
+          challengeRating: updatedData.challengeRating ?? updatedData.cr ?? null,
+          xp: updatedData.xp || null,
+          profBonus: updatedData.profBonus || null,
+          abilities: updatedData.abilities || null,
+          actions: updatedData.actions || null,
+          reactions: updatedData.reactions || null,
+          legendaryActions: updatedData.legendaryActions || null,
+          lairActions: updatedData.lairActions || null,
+          mythicTrait: updatedData.mythicTrait || null,
+          mythicActions: updatedData.mythicActions || null,
+          regionalEffects: updatedData.regionalEffects || null,
+          tags: updatedData.tags || [],
+          source: updatedData.source || 'custom',
+          notes: updatedData.notes || null,
+          isLocal: true
         }
         
         // Try to sync with backend

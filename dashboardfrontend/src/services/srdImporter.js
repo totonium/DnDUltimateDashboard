@@ -1,462 +1,224 @@
 /**
  * 5e SRD Statblock Importer
- * Handles importing monster statblocks from the 5e System Reference Document
+ * Handles importing monster statblocks from Open5e API v2
  *
  * @module services/srdImporter
  */
 
 import { useStatblockStore } from '../stores/statblocks';
 
-/**
- * 5e SRD Monster Data
- * Subset of SRD monsters for quick import
- * Full dataset would be imported from external JSON file in production
- */
-const srdMonsters = [
-  {
-    name: 'Goblin',
-    type: 'monster',
-    size: 'small',
-    alignment: 'neutral evil',
-    ac: 15,
-    hp: 7,
-    speed: { walk: 30, climb: 0, burrow: 0, fly: 0, hover: false, swim: 0 },
-    speedNotes: '30 ft.',
-    scores: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8, strMod: -1, dexMod: 2, conMod: 0, intMod: 0, wisMod: -1, chaMod: -1 },
-    savingThrows: {},
-    skills: { stealth: 6 },
-    senses: [{ darkvision: 60 }],
-    passivePerception: 9,
-    damageImmunities: [],
-    damageResistances: [],
-    damageVulnerabilities: [],
-    conditionImmunities: [],
-    languages: ['common', 'goblin'],
-    challengeRating: '1/4',
-    xp: 50,
-    abilities: [
-      {
-        name: 'Nimble Escape',
-        description: 'The goblin can take the Disengage or Hide action as a bonus action on each of its turns.',
-        usage: { type: 'none' }
+const OPEN5E_API_BASE = 'https://api.open5e.com/v2';
+const SRD_DOCUMENT_KEY = 'srd-2014';
+
+let cachedMonsters = null;
+
+function isFromSRD(monster) {
+  return monster.document?.key === SRD_DOCUMENT_KEY;
+}
+
+function mapOpen5eV2ToApp(monster) {
+  const abilities = (monster.traits || []).map(trait => ({
+    name: trait.name,
+    description: trait.desc || ''
+  }));
+
+  const actions = (monster.actions || [])
+    .filter(action => action.action_type === 'ACTION')
+    .map(action => {
+      let attackInfo = '';
+      const attack = action.attacks?.[0];
+      if (attack && attack.damage_die_count && attack.damage_die_type) {
+        const dice = `${attack.damage_die_count}d${attack.damage_die_type.replace('D', '')}`;
+        const bonus = attack.damage_bonus ? `+${attack.damage_bonus}` : '';
+        const extraType = attack.extra_damage_type?.name ? ` ${attack.extra_damage_type.name.toLowerCase()}` : '';
+        attackInfo = ` Attack: ${attack.to_hit_mod || '+0'} to hit, ${dice}${bonus}${extraType} damage.`;
       }
-    ],
-    actions: [
-      {
-        name: 'Scimitar',
-        description: 'Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.',
-        type: 'action'
-      },
-      {
-        name: 'Shortbow',
-        description: 'Ranged Weapon Attack: +4 to hit, reach 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.',
-        type: 'action'
-      }
-    ],
-    reactions: [],
-    legendaryActions: null,
+      return {
+        name: action.name,
+        description: action.desc + attackInfo
+      };
+    });
+
+  const reactions = (monster.actions || [])
+    .filter(action => action.action_type === 'REACTION')
+    .map(action => ({
+      name: action.name,
+      description: action.desc
+    }));
+
+  const legendaryActionsList = (monster.actions || [])
+    .filter(action => action.action_type === 'LEGENDARY_ACTION')
+    .map(action => ({
+      name: action.name,
+      description: action.desc
+    }));
+  
+  const legendaryActions = legendaryActionsList.length > 0 
+    ? { description: monster.legendary_desc || '', actions: legendaryActionsList }
+    : null;
+
+  const parseSpeed = (speedAll) => {
+    if (!speedAll) return { walk: 30, climb: 0, burrow: 0, fly: 0, hover: false, swim: 0 };
+    return {
+      walk: speedAll.walk || 30,
+      climb: speedAll.climb || 0,
+      burrow: speedAll.burrow || 0,
+      fly: speedAll.fly || 0,
+      hover: speedAll.hover || false,
+      swim: speedAll.swim || 0
+    };
+  };
+
+
+
+  const parseLanguages = (languages) => {
+    if (!languages || !languages.as_string) return [];
+    if (typeof languages.as_string !== 'string') return [];
+    return languages.as_string.split(',').map(l => l.trim()).filter(l => l);
+  };
+
+  const parseDamageImmunities = (rir) => {
+    if (!rir || !rir.damage_immunities) return [];
+    return rir.damage_immunities
+      .filter(l => typeof l === 'string')
+      .map(l => l.toLowerCase());
+  };
+
+  const parseResistances = (rir, key) => {
+    if (!rir || !rir[key]) return [];
+    return rir[key]
+      .filter(l => typeof l === 'string')
+      .map(l => l.toLowerCase());
+  };
+
+  const calculateModifier = (score) => {
+    const mod = Math.floor((score - 10) / 2);
+    return mod >= 0 ? `+${mod}` : `${mod}`;
+  };
+
+  const parseSkills = (skillBonusesAll) => {
+    if (!skillBonusesAll || typeof skillBonusesAll !== 'object') return [];
+    return Object.entries(skillBonusesAll).map(([skill, modifier]) => ({ 
+      skill: skill.replace(/_/g, ' '), 
+      modifier 
+    }));
+  };
+
+  const parseSavingThrows = (savingThrowsAll) => {
+    if (!savingThrowsAll || typeof savingThrowsAll !== 'object') return [];
+    return Object.entries(savingThrowsAll).map(([ability, modifier]) => ({ ability, modifier }));
+  };
+
+  const parseSensesAsObject = (monster) => {
+    const senses = {};
+    if (monster.darkvision_range) {
+      senses.darkvision = monster.darkvision_range;
+    }
+    if (monster.blindsight_range) {
+      senses.blindsight = monster.blindsight_range;
+    }
+    if (monster.tremorsense_range) {
+      senses.tremorsense = monster.tremorsense_range;
+    }
+    if (monster.truesight_range) {
+      senses.truesight = monster.truesight_range;
+    }
+    return senses;
+  };
+
+  const parseChallengeRating = (cr) => {
+    if (cr === null || cr === undefined) return 0;
+    if (typeof cr === 'number') return cr;
+    const crStr = String(cr);
+    if (crStr.includes('/')) {
+      const [num, den] = crStr.split('/').map(Number);
+      return den ? Math.round((num / den) * 10) / 10 : 0;
+    }
+    return parseInt(crStr) || 0;
+  };
+
+  return {
+    name: monster.name,
+    type: monster.type?.key?.toLowerCase() || monster.type?.name?.toLowerCase() || 'monster',
+    size: monster.size?.key?.toLowerCase() || monster.size?.name?.toLowerCase() || 'medium',
+    alignment: monster.alignment || 'unaligned',
+    armorClass: monster.armor_class,
+    armorType: monster.armor_detail || '',
+    hitPoints: monster.hit_points,
+    hitDice: monster.hit_dice || '',
+    speed: parseSpeed(monster.speed_all),
+    speedNotes: monster.speed?.walk ? `${monster.speed.walk} ft.` : '30 ft.',
+    scores: {
+      str: monster.ability_scores?.strength || 10,
+      dex: monster.ability_scores?.dexterity || 10,
+      con: monster.ability_scores?.constitution || 10,
+      int: monster.ability_scores?.intelligence || 10,
+      wis: monster.ability_scores?.wisdom || 10,
+      cha: monster.ability_scores?.charisma || 10,
+      strMod: calculateModifier(monster.ability_scores?.strength || 10),
+      dexMod: calculateModifier(monster.ability_scores?.dexterity || 10),
+      conMod: calculateModifier(monster.ability_scores?.constitution || 10),
+      intMod: calculateModifier(monster.ability_scores?.intelligence || 10),
+      wisMod: calculateModifier(monster.ability_scores?.wisdom || 10),
+      chaMod: calculateModifier(monster.ability_scores?.charisma || 10)
+    },
+    savingThrows: parseSavingThrows(monster.saving_throws_all),
+    skills: parseSkills(monster.skill_bonuses_all),
+    senses: parseSensesAsObject(monster),
+    passivePerception: monster.passive_perception || 10,
+    damageImmunities: parseDamageImmunities(monster.resistances_and_immunities),
+    damageResistances: parseResistances(monster.resistances_and_immunities, 'damage_resistances'),
+    damageVulnerabilities: parseResistances(monster.resistances_and_immunities, 'damage_vulnerabilities'),
+    conditionImmunities: parseResistances(monster.resistances_and_immunities, 'condition_immunities'),
+    languages: parseLanguages(monster.languages),
+    challengeRating: parseChallengeRating(monster.challenge_rating),
+    xp: monster.experience_points || 0,
+    abilities,
+    actions,
+    reactions,
+    legendaryActions,
     lairActions: null,
     mythicTrait: null,
     mythicActions: [],
     regionalEffects: null,
-    source: '5e srd',
+    source: '5e SRD (Open5e v2)',
     isLocal: true,
-    tags: ['srd', 'monster'],
-    notes: ''
-  },
-  {
-    name: 'Wolf',
-    type: 'monster',
-    size: 'Medium',
-    alignment: 'Unaligned',
-    ac: 13,
-    hp: 11,
-    speed: { walk: 40 },
-    scores: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
-    savingThrows: [],
-    skills: { perception: 3, stealth: 4 },
-    senses: { passivePerception: 13 },
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: [],
-    challengeRating: '1/4',
-    experiencePoints: 50,
-    abilities: [],
-    actions: [
-      {
-        id: 'wolf-bite',
-        name: 'Bite',
-        description: 'Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) piercing damage. If the target is a creature, it must succeed on a DC 11 Strength saving throw or be knocked prone.',
-        attackType: 'melee',
-        damage: { dice: '2d4+2', type: 'piercing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Orc',
-    type: 'monster',
-    size: 'Medium',
-    alignment: 'Chaotic Evil',
-    ac: 13,
-    hp: 15,
-    speed: { walk: 30 },
-    scores: { str: 16, dex: 12, con: 16, int: 8, wis: 11, cha: 10 },
-    savingThrows: [],
-    skills: { intimidation: 3 },
-    senses: { darkvision: 60 },
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common', 'Orc'],
-    challengeRating: '1/2',
-    experiencePoints: 100,
-    abilities: [
-      {
-        id: 'orc-aggressive',
-        name: 'Aggressive',
-        description: 'As a bonus action, the orc can move up to its speed toward a hostile creature that it can see.',
-        usage: { type: 'none' }
-      }
-    ],
-    actions: [
-      {
-        id: 'orc-greataxe',
-        name: 'Greataxe',
-        description: 'Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 9 (1d12 + 3) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '1d12+3', type: 'slashing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Ogre',
-    type: 'monster',
-    size: 'Large',
-    alignment: 'Chaotic Evil',
-    ac: 11,
-    hp: 59,
-    speed: { walk: 40 },
-    scores: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
-    savingThrows: [],
-    skills: {},
-    senses: { darkvision: 60 },
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common', 'Giant'],
-    challengeRating: '2',
-    experiencePoints: 450,
-    abilities: [],
-    actions: [
-      {
-        id: 'ogre-greatclub',
-        name: 'Greatclub',
-        description: 'Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) bludgeoning damage.',
-        attackType: 'melee',
-        damage: { dice: '2d8+4', type: 'bludgeoning' }
-      },
-      {
-        id: 'ogre-javelin',
-        name: 'Javelin',
-        description: 'Melee or Ranged Weapon Attack: +6 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 11 (2d6 + 4) piercing damage.',
-        attackType: 'ranged',
-        damage: { dice: '2d6+4', type: 'piercing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Bandit Captain',
-    type: 'npc',
-    size: 'Medium',
-    alignment: 'Lawful Evil',
-    ac: 15,
-    hp: 65,
-    speed: { walk: 30 },
-    scores: { str: 15, dex: 16, con: 14, int: 14, wis: 11, cha: 14 },
-    savingThrows: { dex: 6, wis: 3 },
-    skills: { athletics: 5, deception: 4 },
-    senses: {},
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common', 'two other languages'],
-    challengeRating: '2',
-    experiencePoints: 450,
-    abilities: [
-      {
-        id: 'bandit-captain-swashbuckling',
-        name: 'Swashbuckling',
-        description: 'The captain gains +5 ft. speed and +2 to AC while no enemy is within 5 ft.',
-        usage: { type: 'none' }
-      }
-    ],
-    actions: [
-      {
-        id: 'bandit-captain-scimitar',
-        name: 'Scimitar',
-        description: 'Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d6 + 4) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '1d6+4', type: 'slashing' }
-      },
-      {
-        id: 'bandit-captain-pistol',
-        name: 'Pistol',
-        description: 'Ranged Weapon Attack: +5 to hit, range 30/90 ft., one target. Hit: 7 (1d10 + 2) piercing damage.',
-        attackType: 'ranged',
-        damage: { dice: '1d10+2', type: 'piercing' }
-      }
-    ],
-    reactions: [
-      {
-        id: 'bandit-captain-parry',
-        name: 'Parry',
-        description: 'The captain adds 2 to its AC against one melee attack that would hit it.',
-        usage: { type: 'reaction' }
-      }
-    ],
-    legendaryActions: null
-  },
-  {
-    name: 'Guard',
-    type: 'npc',
-    size: 'Medium',
-    alignment: 'Lawful Neutral',
-    ac: 16,
-    hp: 11,
-    speed: { walk: 30 },
-    scores: { str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10 },
-    savingThrows: { wis: 2 },
-    skills: { perception: 2 },
-    senses: {},
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common'],
-    challengeRating: '1/8',
-    experiencePoints: 25,
-    abilities: [],
-    actions: [
-      {
-        id: 'guard-spear',
-        name: 'Spear',
-        description: 'Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d6 + 1) piercing damage, or 5 (1d8 + 1) piercing damage if used with two hands.',
-        attackType: 'melee',
-        damage: { dice: '1d6+1', type: 'piercing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Skeleton',
-    type: 'monster',
-    size: 'Medium',
-    alignment: 'Lawful Evil',
-    ac: 13,
-    hp: 13,
-    speed: { walk: 30 },
-    scores: { str: 10, dex: 14, con: 15, int: 6, wis: 8, cha: 5 },
-    savingThrows: {},
-    skills: {},
-    senses: { darkvision: 60 },
-    resistances: { piercing: true },
-    vulnerabilities: { bludgeoning: true },
-    immunities: { poison: true },
-    conditionImmunities: { poisoned: true },
-    languages: ['Understands all languages but cannot speak'],
-    challengeRating: '1/4',
-    experiencePoints: 50,
-    abilities: [
-      {
-        id: 'skeleton-darkness',
-        name: 'Darkness',
-        description: 'The skeleton can create magical darkness, 20 ft radius, centered on itself.',
-        usage: { type: 'recharge', value: '6' }
-      }
-    ],
-    actions: [
-      {
-        id: 'skeleton-scimitar',
-        name: 'Scimitar',
-        description: 'Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '1d6+2', type: 'slashing' }
-      },
-      {
-        id: 'skeleton-shortbow',
-        name: 'Shortbow',
-        description: 'Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.',
-        attackType: 'ranged',
-        damage: { dice: '1d6+2', type: 'piercing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Priest',
-    type: 'npc',
-    size: 'Medium',
-    alignment: 'Neutral Good',
-    ac: 13,
-    hp: 27,
-    speed: { walk: 30 },
-    scores: { str: 10, dex: 11, con: 12, int: 13, wis: 16, cha: 14 },
-    savingThrows: { wis: 5, cha: 4 },
-    skills: { medicine: 7, persuasion: 4, religion: 4 },
-    senses: {},
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common', 'Dwarvish'],
-    challengeRating: '2',
-    experiencePoints: 450,
-    abilities: [
-      {
-        id: 'priest-divine-touch',
-        name: 'Divine Touch',
-        description: 'Touch a creature to cure 2d8 + 4 HP.',
-        usage: { type: 'perDay', value: 3 }
-      }
-    ],
-    actions: [
-      {
-        id: 'priest-mace',
-        name: 'Mace',
-        description: 'Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 3 (1d6) bludgeoning damage.',
-        attackType: 'melee',
-        damage: { dice: '1d6', type: 'bludgeoning' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Cultist',
-    type: 'npc',
-    size: 'Medium',
-    alignment: 'Chaotic Evil',
-    ac: 12,
-    hp: 9,
-    speed: { walk: 30 },
-    scores: { str: 11, dex: 12, con: 10, int: 10, wis: 11, cha: 10 },
-    savingThrows: { wis: 2 },
-    skills: {},
-    senses: {},
-    resistances: [],
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common'],
-    challengeRating: '1/8',
-    experiencePoints: 25,
-    abilities: [
-      {
-        id: 'cultist-dark-devotion',
-        name: 'Dark Devotion',
-        description: 'The cultist has advantage on saving throws against being charmed or frightened.',
-        usage: { type: 'none' }
-      }
-    ],
-    actions: [
-      {
-        id: 'cultist-sickle',
-        name: 'Sickle',
-        description: 'Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '1d4+1', type: 'slashing' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
-  },
-  {
-    name: 'Young Red Dragon',
-    type: 'monster',
-    size: 'Large',
-    alignment: 'Chaotic Evil',
-    ac: 17,
-    hp: 75,
-    speed: { walk: 40, fly: 80 },
-    scores: { str: 19, dex: 14, con: 17, int: 12, wis: 11, cha: 15 },
-    savingThrows: { dex: 6, con: 7, wis: 4, cha: 6 },
-    skills: { perception: 7, stealth: 6 },
-    senses: { blindsight: 30, darkvision: 120 },
-    resistances: { fire: true },
-    vulnerabilities: [],
-    immunities: [],
-    conditionImmunities: [],
-    languages: ['Common', 'Draconic'],
-    challengeRating: '7',
-    experiencePoints: 2300,
-    abilities: [
-      {
-        id: 'young-dragon-fire-breath',
-        name: 'Fire Breath',
-        description: 'The dragon exhales fire in a 30 ft cone. Each creature in the area must make a DC 14 Dexterity saving throw, taking 42 (12d6) fire damage on a failed save, or half as much damage on a successful one.',
-        usage: { type: 'recharge', value: '5-6' }
-      }
-    ],
-    actions: [
-      {
-        id: 'young-dragon-bite',
-        name: 'Bite',
-        description: 'Melee Weapon Attack: +7 to hit, reach 10 ft., one target. Hit: 15 (2d8 + 6) piercing damage plus 3 (1d6) fire damage.',
-        attackType: 'melee',
-        damage: { dice: '2d8+6', type: 'piercing', extra: '1d6 fire' }
-      },
-      {
-        id: 'young-dragon-claw',
-        name: 'Claw',
-        description: 'Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 6) slashing damage.',
-        attackType: 'melee',
-        damage: { dice: '2d6+6', type: 'slashing' }
-      },
-      {
-        id: 'young-dragon-tail',
-        name: 'Tail',
-        description: 'Melee Weapon Attack: +7 to hit, reach 15 ft., one target. Hit: 12 (2d6 + 6) bludgeoning damage.',
-        attackType: 'melee',
-        damage: { dice: '2d6+6', type: 'bludgeoning' }
-      }
-    ],
-    reactions: [],
-    legendaryActions: null
+    tags: ['srd', monster.type?.key?.toLowerCase() || monster.type?.name?.toLowerCase() || 'monster'],
+    notes: monster.desc || ''
+  };
+}
+
+async function fetchAllSRDMonsters() {
+  if (cachedMonsters) {
+    return cachedMonsters;
   }
-];
 
-/**
- * SRD Importer for 5e statblocks
- */
+  const monsters = [];
+  let nextUrl = `${OPEN5E_API_BASE}/creatures/?document=${SRD_DOCUMENT_KEY}&limit=100`;
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch monsters: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    monsters.push(...data.results);
+    nextUrl = data.next;
+  }
+
+  cachedMonsters = monsters;
+  return cachedMonsters;
+}
+
 export const srdImporter = {
-  /**
-   * Get list of available SRD monsters
-   * @returns {string[]} Array of monster names
-   */
-  getAvailableMonsters() {
-    return srdMonsters.map(m => m.name).sort();
+  async getAvailableMonsters() {
+    const monsters = await fetchAllSRDMonsters();
+    return monsters.filter(isFromSRD).map(m => m.name).sort();
   },
 
-  /**
-   * Import a single SRD monster
-   * @param {string} monsterName - Name of the monster to import
-   * @returns {Promise<object|null>} Import result with action taken
-   */
   async importOne(monsterName) {
-    const monster = srdMonsters.find(
+    const monsters = await fetchAllSRDMonsters();
+    const monster = monsters.find(
       m => m.name.toLowerCase() === monsterName.toLowerCase()
     );
 
@@ -468,94 +230,90 @@ export const srdImporter = {
     return this.importStatblock(monster);
   },
 
-  /**
-   * Import all SRD monsters
-   * @returns {Promise<array>} Array of import results with action details
-   */
   async importAll() {
+    const monsters = (await fetchAllSRDMonsters()).filter(isFromSRD);
+    console.log(`Starting SRD import of ${monsters.length} monsters...`);
     const results = [];
 
-    for (const monster of srdMonsters) {
-      const result = await this.importStatblock(monster);
-      results.push(result); // Return the full result object with statblock property
+    for (let i = 0; i < monsters.length; i++) {
+      const monster = monsters[i];
+      try {
+        const result = await this.importStatblock(monster);
+        results.push(result);
+        if ((i + 1) % 50 === 0) {
+          console.log(`SRD Import progress: ${i + 1}/${monsters.length}`);
+        }
+      } catch (error) {
+        console.error(`Error importing "${monster.name}":`, error);
+        results.push({ action: 'error', error: error.message, name: monster.name });
+      }
     }
 
+    const created = results.filter(r => r.action === 'created');
+    const updated = results.filter(r => r.action === 'updated');
+    const errors = results.filter(r => r.action === 'error');
+
+    console.log(`SRD Import complete: ${created.length} created, ${updated.length} updated, ${errors.length} errors`);
     return results;
   },
 
-  /**
-    * Import a statblock object into the database (with duplicate checking)
-    * @param {object} data - Statblock data
-    * @returns {Promise<object>} Import result with action taken and statblock data
-    */
-   async importStatblock(data) {
-     const statblockData = {
-       ...data,
-       challengeRating: data.challengeRating || data.cr,
-       xp: data.xp || data.experiencePoints,
-       speed: data.speed || { walk: 30, climb: 0, burrow: 0, fly: 0, hover: false, swim: 0 },
-       scores: data.scores || { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
-       source: data.source || '5e SRD',
-       isLocal: true,
-       tags: data.tags || ['srd', data.type || 'monster']
-     }
+  async importStatblock(data) {
+    const mappedData = mapOpen5eV2ToApp(data);
+    const store = useStatblockStore.getState();
 
-     try {
-       const store = useStatblockStore.getState()
-       const result = await store.importStatblock(statblockData)
-       
-       if (!result || !result.statblock || !result.statblock.name) {
-         throw new Error('Invalid result structure from importStatblock')
-       }
-       
-       console.log(`SRD Import: ${result.action} statblock "${result.statblock.name}"`)
-       return result
-     } catch (error) {
-       console.error(`Failed to import SRD statblock "${data.name}":`, error)
-       throw new Error(`Failed to import ${data.name}: ${error.message}`)
-     }
-   },
+    // First, check if statblock already exists by name
+    const existing = await store.findStatblockByName(mappedData.name);
 
-  /**
-   * Search SRD monsters by name
-   * @param {string} query - Search query
-   * @returns {string[]} Matching monster names
-   */
-  searchMonsters(query) {
+    if (existing) {
+      try {
+        await store.updateStatblock(existing.id, mappedData);
+        console.log(`SRD Import: updated statblock "${mappedData.name}"`);
+        return { action: 'updated', statblock: { ...existing, ...mappedData } };
+      } catch (error) {
+        console.error(`Failed to update SRD statblock "${mappedData.name}":`, error);
+        return { action: 'error', error: error.message, name: mappedData.name };
+      }
+    } else {
+      try {
+        const result = await store.addStatblock(mappedData);
+        console.log(`SRD Import: created statblock "${mappedData.name}"`);
+        return { action: 'created', statblock: result };
+      } catch (error) {
+        console.error(`Failed to create SRD statblock "${mappedData.name}":`, error);
+        return { action: 'error', error: error.message, name: mappedData.name };
+      }
+    }
+  },
+
+  async searchMonsters(query) {
+    const monsters = (await fetchAllSRDMonsters()).filter(isFromSRD);
     const q = query.toLowerCase();
-    return srdMonsters
+    return monsters
       .filter(m => m.name.toLowerCase().includes(q))
       .map(m => m.name);
   },
 
-  /**
-   * Get monster count
-   * @returns {number}
-   */
-  getMonsterCount() {
-    return srdMonsters.length;
+  async getMonsterCount() {
+    const monsters = (await fetchAllSRDMonsters()).filter(isFromSRD);
+    return monsters.length;
   },
 
-  /**
-   * Filter monsters by challenge rating
-   * @param {string} cr - Challenge rating filter
-   * @returns {string[]} Monster names
-   */
-  getMonstersByCR(cr) {
-    return srdMonsters
-      .filter(m => m.challengeRating === cr)
+  async getMonstersByCR(cr) {
+    const monsters = (await fetchAllSRDMonsters()).filter(isFromSRD);
+    return monsters
+      .filter(m => String(m.challenge_rating) === String(cr))
       .map(m => m.name);
   },
 
-  /**
-   * Filter monsters by type
-   * @param {string} type - Monster type filter
-   * @returns {string[]} Monster names
-   */
-  getMonstersByType(type) {
-    return srdMonsters
-      .filter(m => m.type === type)
+  async getMonstersByType(type) {
+    const monsters = (await fetchAllSRDMonsters()).filter(isFromSRD);
+    return monsters
+      .filter(m => m.type?.key?.toLowerCase() === type.toLowerCase() || m.type?.name?.toLowerCase() === type.toLowerCase())
       .map(m => m.name);
+  },
+
+  clearCache() {
+    cachedMonsters = null;
   }
 };
 

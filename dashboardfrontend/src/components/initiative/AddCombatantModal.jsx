@@ -36,14 +36,16 @@ export function AddCombatantModal({ onClose }) {
     
     // Auto-fill combatant data from statblock if available
     if (statblock) {
+      const ac = statblock.armorClass ?? statblock.ac
+      const hp = statblock.hitPoints ?? statblock.hp
       setFormData(prev => ({
         ...prev,
         name: statblock.name || prev.name,
         type: statblock.type || prev.type,
-        ac: statblock.ac || prev.ac,
-        hp: statblock.hp || prev.maxHP,
-        maxHP: parseInt(statblock.hp) || prev.maxHP,
-        currentHP: parseInt(statblock.hp) || prev.currentHP
+        ac: ac ?? prev.ac,
+        hp: hp ?? prev.maxHP,
+        maxHP: hp ?? prev.maxHP,
+        currentHP: hp ?? prev.currentHP
       }));
     }
   };

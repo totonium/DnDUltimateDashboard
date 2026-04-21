@@ -117,8 +117,8 @@ export function parseTetraCubeText(text, statblock) {
   result = result.replace(/\[CHA\]/gi, cha.toString())
   result = result.replace(/\[CON\]/gi, con.toString())
 
-  result = result.replace(/\[HP\]/gi, statblock.hp?.toString() || '0')
-  result = result.replace(/\[AC\]/gi, statblock.ac?.toString() || '10')
+  result = result.replace(/\[HP\]/gi, (statblock.hitPoints ?? statblock.hp)?.toString() || '0')
+  result = result.replace(/\[AC\]/gi, (statblock.armorClass ?? statblock.ac)?.toString() || '10')
   result = result.replace(/\[CR\]/gi, statblock.challengeRating?.toString() || '0')
 
   result = result.replace(/\{(\w+(?:\s*\w+)*)\}/g, '$1')

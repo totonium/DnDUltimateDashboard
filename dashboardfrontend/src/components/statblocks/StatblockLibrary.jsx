@@ -11,7 +11,7 @@ import { useUIStore } from '../../stores/ui';
 import { StatblockViewer } from './StatblockViewer';
 import {SRDImportModal} from "./SRDImportModal"
 import {ImportModal} from "./ImportModal"
-import { Search, Filter, Grid, List, Plus, Upload, BookOpen, Edit2, X } from 'lucide-react';
+import { Search, Filter, Grid, List, Plus, Upload, BookOpen, Edit2, X, RefreshCw, CloudOff, Cloud } from 'lucide-react';
 import './StatblockLibrary.css';
 
 export const CUSTOM_TYPE_OPTIONS = [
@@ -36,6 +36,9 @@ export function StatblockLibrary() {
   const {
     statblocks,
     loadStatblocks,
+    syncStatblocks,
+    syncMissingToBackend,
+    isSyncing,
     searchQuery,
     filterType,
     filterCR,
@@ -90,6 +93,18 @@ export function StatblockLibrary() {
       <header className="library-header">
         <h1>Statblock Library</h1>
         <div className="header-actions">
+          <button 
+            className="btn btn-secondary" 
+            onClick={syncMissingToBackend}
+            disabled={isSyncing}
+            title="Sync missing statblocks to backend"
+          >
+            {isSyncing ? <RefreshCw size={16} className="spinning" /> : <Cloud size={16} />}
+            Sync Missing
+          </button>
+          <button className="btn btn-secondary" onClick={syncStatblocks} title="Sync from backend">
+            <RefreshCw size={16} />
+          </button>
           <button className="btn btn-secondary" onClick={handleOpenSRDImportModal}>
             <BookOpen size={16} />
             Import SRD
@@ -307,10 +322,10 @@ function StatblockCard({ statblock, onClick, isSelected }) {
 
       <div className="card-stats">
         <span className="stat">
-          <strong>AC</strong> {statblock.ac}
+          <strong>AC</strong> {statblock.armorClass ?? statblock.ac ?? '10'}
         </span>
         <span className="stat">
-          <strong>HP</strong> {statblock.hp}
+          <strong>HP</strong> {statblock.hitPoints ?? statblock.hp ?? '10'}
         </span>
         <span className="stat">
           <strong>CR</strong> {statblock.challengeRating}
@@ -387,8 +402,8 @@ function StatblockListItem({ statblock, onClick, isSelected }) {
         </div>
       </div>
       <div className="item-stats">
-        <span>AC: {statblock.ac}</span>
-        <span>HP: {statblock.hp}</span>
+        <span>AC: {statblock.armorClass ?? statblock.ac ?? '10'}</span>
+        <span>HP: {statblock.hitPoints ?? statblock.hp ?? '10'}</span>
         <span>CR: {statblock.challengeRating}</span>
       </div>
     </div>

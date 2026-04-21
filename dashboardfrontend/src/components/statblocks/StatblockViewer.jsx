@@ -115,16 +115,14 @@ export function StatblockViewer({ statblock, onClose }) {
         <div className="core-stats">
           <div className="stat-box">
             <span className="stat-label">Armor Class</span>
-            <span className="stat-value">{statblock.ac}</span>
-            {statblock.acNotes && <span className="stat-extra">{statblock.acNotes}</span>}
-            {statblock.natArmorBonus > 0 && (
-              <span className="stat-extra">Natural Armor: +{statblock.natArmorBonus}</span>
-            )}
+            <span className="stat-value">{statblock.armorClass ?? statblock.ac ?? '10'}</span>
+            {statblock.armorType && <span className="stat-extra">{statblock.armorType}</span>}
+            {statblock.acNote && <span className="stat-extra">{statblock.acNote}</span>}
           </div>
           <div className="stat-box">
             <span className="stat-label">Hit Points</span>
-            <span className="stat-value">{statblock.hp}</span>
-            {statblock.hpFormula && <span className="stat-extra">{statblock.hpFormula}</span>}
+            <span className="stat-value">{statblock.hitPoints ?? statblock.hp ?? '10'}</span>
+            {statblock.hitDice && <span className="stat-extra">({statblock.hitDice})</span>}
           </div>
           <div className="stat-box">
             <span className="stat-label">Speed</span>
