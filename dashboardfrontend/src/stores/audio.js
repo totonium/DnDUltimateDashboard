@@ -393,7 +393,7 @@ export const useAudioStore = create(
 
       // Stream audio from backend
       streamAudioFromBackend: async (trackId) => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
         return `${baseUrl}/v1/audio/${trackId}/stream`
       },
 

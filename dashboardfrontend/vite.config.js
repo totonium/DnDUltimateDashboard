@@ -100,6 +100,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    allowedHosts: ['thomas-pc', 'thomas-server', 'localhost'],
     proxy: {
       '/v1': {
         target: 'http://localhost:8080',
