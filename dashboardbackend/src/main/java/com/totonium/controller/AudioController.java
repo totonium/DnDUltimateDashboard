@@ -47,14 +47,8 @@ public class AudioController {
     public ResponseEntity<AudioDTO> updateTrack(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAudioRequest request) {
-        AudioDTO updated = audioService.update(id, request.name(), request.durationSeconds());
+        AudioDTO updated = audioService.update(id, request.name(), request.durationSeconds(), request.category());
         return ResponseEntity.ok(updated);
-    }
-
-    @GetMapping("/playlists")
-    @Operation(summary = "Get all playlists")
-    public ResponseEntity<List<AudioDTO>> getAllPlaylists() {
-        return ResponseEntity.ok(audioService.findAllPlaylists());
     }
 
     @GetMapping("/{id}")
@@ -81,8 +75,8 @@ public class AudioController {
     public ResponseEntity<AudioDTO> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("name") String name,
-            @RequestParam(value = "isPlaylist", required = false, defaultValue = "false") Boolean isPlaylist) {
-        AudioDTO created = audioService.upload(file, name, isPlaylist);
+            @RequestParam(value = "category", required = false, defaultValue = "sfx") String category) {
+        AudioDTO created = audioService.upload(file, name, category);
         return ResponseEntity.ok(created);
     }
 
@@ -90,14 +84,14 @@ public class AudioController {
     @Operation(summary = "Upload multiple audio files")
     public ResponseEntity<List<AudioDTO>> uploadMultiple(
             @RequestParam("files") MultipartFile[] files,
-            @RequestParam(value = "isPlaylist", required = false, defaultValue = "false") Boolean isPlaylist) {
+            @RequestParam(value = "category", required = false, defaultValue = "sfx") String category) {
         List<AudioDTO> created = new java.util.ArrayList<>();
         for (MultipartFile file : files) {
             String name = file.getOriginalFilename();
             if (name != null && name.contains(".")) {
                 name = name.substring(0, name.lastIndexOf("."));
             }
-            created.add(audioService.upload(file, name, isPlaylist));
+            created.add(audioService.upload(file, name, category));
         }
         return ResponseEntity.ok(created);
     }

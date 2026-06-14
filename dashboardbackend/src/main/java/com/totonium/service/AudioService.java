@@ -31,14 +31,7 @@ public class AudioService {
 
     @Transactional(readOnly = true)
     public List<AudioDTO> findAllTracks() {
-        return audioRepository.findByIsPlaylistFalse().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AudioDTO> findAllPlaylists() {
-        return audioRepository.findByIsPlaylistTrue().stream()
+        return audioRepository.findAll().stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -51,7 +44,7 @@ public class AudioService {
     }
 
     @Transactional
-    public AudioDTO upload(MultipartFile file, String name, Boolean isPlaylist) {
+    public AudioDTO upload(MultipartFile file, String name, String category) {
         try {
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
@@ -74,7 +67,7 @@ public class AudioService {
                     .filePath(filePath.toString())
                     .contentType(file.getContentType())
                     .fileSize(file.getSize())
-                    .isPlaylist(isPlaylist != null && isPlaylist)
+                    .category(category != null ? category : "sfx")
                     .build();
 
             Audio saved = audioRepository.save(audio);
@@ -110,13 +103,16 @@ public class AudioService {
     }
 
     @Transactional
-    public AudioDTO update(UUID id, String name, Long durationSeconds) {
+    public AudioDTO update(UUID id, String name, Long durationSeconds, String category) {
         Audio audio = audioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Audio", id));
 
         audio.setName(name);
         if (durationSeconds != null) {
             audio.setDurationSeconds(durationSeconds);
+        }
+        if (category != null) {
+            audio.setCategory(category);
         }
 
         Audio saved = audioRepository.save(audio);
@@ -132,7 +128,7 @@ public class AudioService {
                 audio.getContentType(),
                 audio.getFileSize(),
                 audio.getDurationSeconds(),
-                audio.getIsPlaylist(),
+                audio.getCategory(),
                 audio.getCreatedAt(),
                 audio.getUpdatedAt()
         );

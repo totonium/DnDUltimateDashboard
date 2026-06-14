@@ -9,6 +9,4 @@ import java.util.UUID;
 
 @Repository
 public interface AudioRepository extends JpaRepository<Audio, UUID> {
-    List<Audio> findByIsPlaylistFalse();
-    List<Audio> findByIsPlaylistTrue();
 }

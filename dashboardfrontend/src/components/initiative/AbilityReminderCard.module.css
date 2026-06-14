@@ -47,30 +47,10 @@
   font-size: var(--text-sm);
 }
 
-.turnBadge {
-  background: var(--overlay-light);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-}
-
 .headerRight {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.closeBtn {
-  padding: var(--space-1);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--bg-primary);
-  opacity: 0.7;
-}
-
-.closeBtn:hover {
-  opacity: 1;
 }
 
 .reminderContent {
@@ -79,15 +59,13 @@
   flex: 1;
 }
 
-.abilitiesSection,
-.reactionsSection,
+.actionsSection,
 .legendarySection,
 .mythicSection {
   margin-bottom: var(--space-4);
 }
 
-.abilitiesSection h4,
-.reactionsSection h4,
+.actionsSection h4,
 .legendarySection h4,
 .mythicSection h4 {
   display: flex;
@@ -96,6 +74,12 @@
   margin: 0 0 var(--space-2) 0;
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.actionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .highlight {
@@ -252,4 +236,100 @@
   font-size: var(--text-sm);
   color: var(--color-error);
   font-weight: var(--font-semibold);
+}
+
+/* Action Item Styles */
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-bottom: var(--space-1);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  position: relative;
+  width: 100%;
+}
+
+.actionInfo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.attackBonus {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+}
+
+.damageInfo {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+  background: rgba(245, 11, 11, 0.1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.saveDC {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+/* Legendary Counter Styles */
+.legendaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.legendaryDescription {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2) 0;
+  font-style: italic;
+}
+
+.legendaryCounter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.counterBtn {
+  padding: var(--space-1);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.counterBtn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--color-secondary);
+}
+
+.counterBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.counterValue {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  min-width: 40px;
+  text-align: center;
 }

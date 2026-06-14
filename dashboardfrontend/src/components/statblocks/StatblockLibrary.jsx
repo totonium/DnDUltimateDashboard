@@ -14,27 +14,11 @@ import {ImportModal} from "./ImportModal"
 import { Search, Filter, Grid, List, Plus, Upload, BookOpen, Edit2, X, RefreshCw, CloudOff, Cloud } from 'lucide-react';
 import './StatblockLibrary.css';
 
-export const CUSTOM_TYPE_OPTIONS = [
-  { value: '', label: 'None' },
-  { value: 'boss', label: 'Boss' },
-  { value: 'elite', label: 'Elite' },
-  { value: 'minion', label: 'Minion' },
-  { value: 'solo', label: 'Solo' },
-  { value: 'swarm', label: 'Swarm' },
-  { value: 'leader', label: 'Leader' },
-  { value: 'mount', label: 'Mount' },
-  { value: 'pet', label: 'Pet' },
-  { value: 'familiar', label: 'Familiar' },
-  { value: 'summon', label: 'Summon' },
-  { value: 'environmental', label: 'Environmental' }
-];
-
 /**
  * StatblockLibrary - Main statblock browser and management
  */
 export function StatblockLibrary() {
   const {
-    statblocks,
     loadStatblocks,
     syncStatblocks,
     syncMissingToBackend,
@@ -269,20 +253,6 @@ export function StatblockLibrary() {
  * Statblock Card for Grid View
  */
 function StatblockCard({ statblock, onClick, isSelected }) {
-  const { setCustomType } = useStatblockStore();
-  const [isEditingType, setIsEditingType] = useState(false);
-  const [selectedType, setSelectedType] = useState(statblock.customType || '');
-
-  const handleTypeChange = async (e) => {
-    const newType = e.target.value;
-    setSelectedType(newType);
-    await setCustomType(statblock.id, newType);
-    setIsEditingType(false);
-  };
-
-  const currentTypeOption = CUSTOM_TYPE_OPTIONS.find(opt => opt.value === selectedType);
-  const displayLabel = currentTypeOption?.label || '';
-
   return (
     <div
       className={`statblock-card ${isSelected ? 'selected' : ''}`}
@@ -290,33 +260,7 @@ function StatblockCard({ statblock, onClick, isSelected }) {
     >
       <div className="card-header">
         <h3 className="statblock-name">{statblock.name}</h3>
-        <div className="type-badge-container">
-          {isEditingType ? (
-            <select
-              className="type-select"
-              value={selectedType}
-              onChange={handleTypeChange}
-              onBlur={() => setIsEditingType(false)}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-            >
-              {CUSTOM_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : (
-            <button
-              className={`type-badge custom-type-${selectedType || 'none'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditingType(true);
-              }}
-              title="Click to edit category"
-            >
-              {displayLabel || statblock.type}
-              <Edit2 size={10} className="edit-icon" />
-            </button>
-          )}
+        <div className="type-badge-container">          
         </div>
       </div>
 
@@ -351,20 +295,6 @@ function StatblockCard({ statblock, onClick, isSelected }) {
  * Statblock List Item for List View
  */
 function StatblockListItem({ statblock, onClick, isSelected }) {
-  const { setCustomType } = useStatblockStore();
-  const [isEditingType, setIsEditingType] = useState(false);
-  const [selectedType, setSelectedType] = useState(statblock.customType || '');
-
-  const handleTypeChange = async (e) => {
-    const newType = e.target.value;
-    setSelectedType(newType);
-    await setCustomType(statblock.id, newType);
-    setIsEditingType(false);
-  };
-
-  const currentTypeOption = CUSTOM_TYPE_OPTIONS.find(opt => opt.value === selectedType);
-  const displayLabel = currentTypeOption?.label || '';
-
   return (
     <div
       className={`statblock-list-item ${isSelected ? 'selected' : ''}`}
@@ -373,32 +303,6 @@ function StatblockListItem({ statblock, onClick, isSelected }) {
       <div className="item-main">
         <h3>{statblock.name}</h3>
         <div className="type-badge-container">
-          {isEditingType ? (
-            <select
-              className="type-select"
-              value={selectedType}
-              onChange={handleTypeChange}
-              onBlur={() => setIsEditingType(false)}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-            >
-              {CUSTOM_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : (
-            <button
-              className={`type-badge custom-type-${selectedType || 'none'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditingType(true);
-              }}
-              title="Click to edit category"
-            >
-              {displayLabel || statblock.type}
-              <Edit2 size={10} className="edit-icon" />
-            </button>
-          )}
         </div>
       </div>
       <div className="item-stats">

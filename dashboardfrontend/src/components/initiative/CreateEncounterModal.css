@@ -1,0 +1,16 @@
+.warning-message {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--color-warning, #f59e0b);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm, 4px);
+  margin-bottom: var(--space-4);
+  font-size: 0.9rem;
+}
+
+.error-text {
+  color: var(--color-error, #dc2626);
+  font-size: 0.85rem;
+  margin-top: var(--space-1);
+  display: block;
+}

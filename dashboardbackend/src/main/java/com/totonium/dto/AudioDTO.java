@@ -10,7 +10,7 @@ public record AudioDTO(
         String contentType,
         Long fileSize,
         Long durationSeconds,
-        Boolean isPlaylist,
+        String category,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

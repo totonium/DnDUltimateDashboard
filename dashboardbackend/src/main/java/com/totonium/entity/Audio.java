@@ -37,8 +37,8 @@ public class Audio {
     @Column(name = "duration_seconds")
     private Long durationSeconds;
 
-    @Column(name = "is_playlist")
-    private Boolean isPlaylist;
+    @Column(name = "category", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'sfx'")
+    private String category;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -1,0 +1,61 @@
+.manage-players-modal {
+  max-width: 700px;
+  width: 90vw;
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.player-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.player-input {
+  flex: 1;
+  min-width: 120px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #000);
+}
+
+.player-input.small {
+  flex: 0 0 80px;
+  min-width: 60px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  padding: var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon.btn-danger {
+  color: var(--color-error, #dc2626);
+}
+
+.btn-icon.btn-danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.add-player-btn {
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

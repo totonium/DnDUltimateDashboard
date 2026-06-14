@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAudioStore } from '../stores/audio';
-import { audioService } from '../services/audioService';
 
 export function useAudio() {
   const {
@@ -73,9 +72,6 @@ export function useAudio() {
     toggleShuffle,
     toggleRepeat,
     setVolume,
-    uploadAudio: audioService.uploadAudio.bind(audioService),
-    deleteTrack: audioService.deleteTrack.bind(audioService),
-    getTracks: audioService.getAllTracks.bind(audioService)
   };
 }
 

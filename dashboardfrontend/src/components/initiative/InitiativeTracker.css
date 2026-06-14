@@ -15,11 +15,33 @@
 
 .tracker-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-primary);
+  flex-direction: column;
   gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.tracker-header h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.tracker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Small button variant for compact header */
+.btn-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+.btn-sm svg {
+  width: 14px;
+  height: 14px;
 }
 
 .tracker-header h1 {

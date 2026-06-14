@@ -6,9 +6,10 @@
  */
 
 import { useState } from 'react';
-import { Zap, Star, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Star, X, ChevronDown, ChevronUp, Info, Sword, Minus, Plus, Activity } from 'lucide-react';
 import { useInitiativeStore } from '../../stores/initiative';
 import { useStatblockStore } from '../../stores/statblocks';
+import { formatAbilityForCombat, isAttackAction } from '../../services/combatParser';
 import * as styles from './AbilityReminderCard.module.css';
 
 /**
@@ -18,7 +19,7 @@ export function AbilityReminderCard({ combatant, onMarkUsed }) {
   const [expanded, setExpanded] = useState(() => true);
   const [usedAbilities, setUsedAbilities] = useState(combatant.usedAbilities || []);
 
-  const { markAbilityUsed, markAbilityAvailable } = useInitiativeStore();
+  const { markAbilityUsed, markAbilityAvailable} = useInitiativeStore();
   const { statblocks } = useStatblockStore();
 
   // Get statblock if linked
@@ -64,7 +65,7 @@ export function AbilityReminderCard({ combatant, onMarkUsed }) {
     }
   };
 
-  if (!statblock && !combatant.abilities?.length) {
+  if (!statblock) {
     return null;
   }
 
@@ -81,22 +82,46 @@ export function AbilityReminderCard({ combatant, onMarkUsed }) {
 
       {expanded && (
         <div className={styles.reminderContent}>
-          {/* Abilities Section */}
-          {statblock?.abilities?.length > 0 && (
-            <div className={styles.abilitiesSection}>
+          {/* Actions Section */}
+          {statblock?.actions?.length > 0 && (
+            <div className={styles.actionsSection}>
               <h4>
-                <Zap size={16} />
-                Special Abilities
+                <Sword size={16} />
+                Actions
               </h4>
-              <div className="abilities-list">
-                {statblock.abilities.map(ability => (
-                  <AbilityItem
-                    key={ability.id}
-                    ability={ability}
-                    isUsed={usedAbilities.includes(ability.name)}
-                    onToggle={() => handleToggleAbility(ability.name)}
-                  />
-                ))}
+              <div className={styles.actionsList}>
+                {statblock.actions
+                  .slice() // copy to avoid mutating original
+                  .sort((a, b) => {
+                    // Multiattack always on top
+                    if (a.name.toLowerCase().includes('multiattack') && !b.name.toLowerCase().includes('multiattack')) return -1
+                    if (!a.name.toLowerCase().includes('multiattack') && b.name.toLowerCase().includes('multiattack')) return 1
+                    return 0
+                  })
+                  .map(action => (
+                    <ActionItem
+                      key={action.id}
+                      ability={action}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {statblock?.actions?.length > 0 && (
+            <div className={styles.actionsSection}>
+              <h4>
+                <Activity size={16} />
+                abilities
+              </h4>
+              <div className={styles.actionsList}>
+                {statblock.abilities
+                  .map(action => (
+                    <FilteredActionItem
+                      key={action.id}
+                      ability={action}
+                    />
+                  ))}
               </div>
             </div>
           )}
@@ -122,9 +147,9 @@ export function AbilityReminderCard({ combatant, onMarkUsed }) {
           )}
 
           {/* No abilities message */}
-          {!statblock?.abilities?.length && !mythicActions.length && (
+          {!statblock?.actions?.length && !mythicActions.length && (
             <div className={styles.noAbilities}>
-              <p>No special abilities available</p>
+              <p>No combat abilities available</p>
             </div>
           )}
         </div>
@@ -133,37 +158,99 @@ export function AbilityReminderCard({ combatant, onMarkUsed }) {
   );
 }
 
+function FilteredActionItem({ ability }){
+  if(isAttackAction(ability)){
+    return <ActionItem ability={ability} />
+  }
+  return null;
+}
+
 /**
- * Individual ability item with toggle and full details modal
+ * Action Item - displays combat actions with parsed attack/damage info
  */
-function AbilityItem({ ability, isUsed, onToggle, highlight = false }) {
+function ActionItem({ ability }) {
   const [showModal, setShowModal] = useState(false);
+  const formatted = formatAbilityForCombat(ability);
+  
 
-  const formatUsage = (usage) => {
-    if (!usage) return null;
+  if (!formatted) return null;
 
-    switch (usage.type) {
-      case 'recharge':
-        return `Recharge ${usage.value || '6'}`;
-      case 'perDay':
-        return `${usage.value}/day`;
-      case 'once':
-        return 'Once';
-      case 'shortRest':
-        return 'Short rest';
-      case 'longRest':
-        return 'Long rest';
-      default:
-        return null;
-    }
-  };
+  return (
+    <>
+      <div className={styles.actionItem}>
+        <div className={styles.actionInfo}>
+          <span className={styles.abilityName}>{formatted.name}</span>
+          {formatted.attackBonus && (
+            <span className={styles.attackBonus}>{formatted.attackBonus}</span>
+          )}
+                    {formatted.saveDC && (
+            <span className={styles.saveDC}>{formatted.saveDC}</span>
+          )}
+          {formatted.damage && (
+            <span className={styles.damageInfo}>
+              {formatted.damage.dice} {formatted.damage.type}
+            </span>
+          )}
+        </div>
 
-  const usage = ability.usage ? formatUsage(ability.usage) : null;
+        {formatted.description && (
+          <button
+            className={styles.infoBtn}
+            onClick={() => setShowModal(true)}
+            title="View details"
+          >
+            <Info size={14} />
+          </button>
+        )}
+      </div>
+
+      {showModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h4>{formatted.name}</h4>
+              <button
+                className={styles.modalClose}
+                onClick={() => setShowModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              {formatted.attackBonus && (
+                <p className={styles.modalUsage}>
+                  <strong>Attack:</strong> {formatted.attackBonus} to hit
+                </p>
+              )}
+              {formatted.damage && (
+                <p className={styles.modalDamage}>
+                  <strong>Damage:</strong> {formatted.damage.dice} {formatted.damage.type}
+                </p>
+              )}
+              {formatted.saveDC && (
+                <p className={styles.modalUsage}>
+                  <strong>Save DC:</strong> {formatted.saveDC}
+                </p>
+              )}
+              <p className={styles.modalDescription}>{formatted.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * Ability Item - for mythic actions with toggle
+ */
+function AbilityItem({ ability, isUsed, onToggle }) {
+  const [showModal, setShowModal] = useState(false);
 
   return (
     <>
       <div
-        className={`${styles.abilityItem} ${isUsed ? styles.abilityItemUsed : styles.abilityItemAvailable} ${highlight ? styles.abilityItemHighlight : ''}`}
+        className={`${styles.abilityItem} ${isUsed ? styles.abilityItemUsed : styles.abilityItemAvailable}`}
       >
         <button
           className={styles.toggleBtn}
@@ -174,9 +261,6 @@ function AbilityItem({ ability, isUsed, onToggle, highlight = false }) {
 
         <div className={styles.abilityInfo}>
           <span className={styles.abilityName}>{ability.name}</span>
-          {usage && (
-            <span className={styles.abilityUsage}>{usage}</span>
-          )}
         </div>
 
         {ability.description && (
@@ -203,17 +287,7 @@ function AbilityItem({ ability, isUsed, onToggle, highlight = false }) {
               </button>
             </div>
             <div className={styles.modalBody}>
-              {usage && (
-                <p className={styles.modalUsage}>
-                  <strong>Usage:</strong> {usage}
-                </p>
-              )}
               <p className={styles.modalDescription}>{ability.description}</p>
-              {ability.damage && (
-                <p className={styles.modalDamage}>
-                  <strong>Damage:</strong> {ability.damage.dice} {ability.damage.type}
-                </p>
-              )}
             </div>
           </div>
         </div>

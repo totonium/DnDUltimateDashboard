@@ -6,6 +6,6 @@ import org.jspecify.annotations.Nullable;
 public record UploadAudioRequest(
         @NotBlank(message = "Name is required")
         String name,
-        @Nullable Boolean isPlaylist
+        @Nullable String category
 ) {
 }

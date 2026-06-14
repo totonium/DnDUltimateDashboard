@@ -282,3 +282,38 @@
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
 }
+
+/* Environment Combatant Styles */
+.combatant-card.environment {
+  background: var(--bg-tertiary);
+  opacity: 0.85;
+  border-left: 3px solid var(--color-secondary);
+}
+
+.environment-icon {
+  margin-right: var(--space-1);
+  color: var(--text-muted);
+}
+
+.environment-action {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--color-secondary);
+}
+
+.environment-action h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.action-description {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: 1.4;
+}

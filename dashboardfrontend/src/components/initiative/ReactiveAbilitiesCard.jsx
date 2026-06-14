@@ -1,71 +1,65 @@
 /**
  * Other Combatants Abilities Card Component
- * Displays reactions and legendary actions for combatants whose turn it is NOT
+ * Displays defensive traits, reactions and legendary actions for combatants whose turn it is NOT
  *
  * @module components/initiative/ReactiveAbilitiesCard
  */
 
-import { useState } from 'react';
-import { Shield, AlertTriangle, Users, X, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Shield, AlertTriangle, Users, X, ChevronDown, ChevronUp, Star, Minus, Plus, FormInput } from 'lucide-react';
 import { useInitiativeStore } from '../../stores/initiative';
 import { useStatblockStore } from '../../stores/statblocks';
 import { useUIStore } from '../../stores/ui';
+import { isDefensiveAbility } from '../../services/combatParser';
 import * as styles from './ReactiveAbilitiesCard.module.css';
 
 /**
- * ReactiveAbilitiesCard - Shows reactions and legendary actions for other combatants
+ * ReactiveAbilitiesCard - Shows defensive traits, reactions and legendary actions for other combatants
  */
-export function ReactiveAbilitiesCard({  sidebarCollapsed }) {
+export function ReactiveAbilitiesCard({ sidebarCollapsed }) {
   const [expanded, setExpanded] = useState(() => true);
-  const { combatants, currentTurnIndex } = useInitiativeStore();
+  const { combatants, currentTurnIndex, legendaryActionsUsed, parseLegendaryMax, legendaryResistanceUsed, setLegendaryResistanceUsed, setLegendaryActionsUsed } = useInitiativeStore();
   const { statblocks } = useStatblockStore();
-  const { sidebarCollapsed: storeSidebarCollapsed, isMobile } = useUIStore();
+  const { sidebarCollapsed: storeSidebarCollapsed } = useUIStore();
   const collapsed = sidebarCollapsed ?? storeSidebarCollapsed;
 
   // Get combatants whose turn it is NOT
   const otherCombatants = combatants.filter((_, index) => index !== currentTurnIndex);
 
-  if (otherCombatants.length === 0) {
-    return null;
-  }
+  // Group combatants by statblockId for merging reactions
+  const groupedByStatblock = useMemo(() => {
+    const groups = {};
 
-  // Helper to extract legendary actions array from statblock
-  const getLegendaryActionsArray = (statblock) => {
-    if (!statblock?.legendaryActions) return [];
-    
-    // If it's an array, return it directly
-    if (Array.isArray(statblock.legendaryActions)) {
-      return statblock.legendaryActions;
-    }
-    
-    // If it's an object with actions property, return the actions array
-    if (typeof statblock.legendaryActions === 'object' && statblock.legendaryActions.actions) {
-      return statblock.legendaryActions.actions;
-    }
-    
-    // If it's an object without actions array, check if description exists
-    if (typeof statblock.legendaryActions === 'object') {
-      return statblock.legendaryActions.description ? [statblock.legendaryActions] : [];
-    }
-    
-    return [];
-  };
+    otherCombatants.forEach(combatant => {
+      const key = combatant.statblockId || combatant.id;
+      if (!groups[key]) {
+        groups[key] = {
+          combatants: [],
+          statblockId: combatant.statblockId,
+          reactions: [],
+          legendaryActions: [],
+          defensiveTraits: []
+        };
+      }
+      groups[key].combatants.push(combatant);
 
-  // Group abilities by combatant
-  const getCombatantAbilities = (combatant) => {
-    const statblock = combatant.statblockId
-      ? statblocks.find(s => s.id === combatant.statblockId)
-      : null;
+      // Get statblock data once
+      if (combatant.statblockId) {
+        const statblock = statblocks.find(s => s.id === combatant.statblockId);
+        if (statblock) {
+          groups[key].reactions = statblock.reactions || [];
+          groups[key].legendaryActions = statblock.legendaryActions?.actions || [];
+          groups[key].defensiveTraits = (statblock.abilities || []).filter(a => isDefensiveAbility(a));
+          groups[key].legendaryResistance = (statblock.abilities || []).find(a =>
+            a.name?.toLowerCase().includes('legendary resistance') ||
+            a.description?.toLowerCase().includes('legendary resistance')
+          );
+        }
+      }
+    });
 
-    if (!statblock) {
-      return { reactions: [], legendaryActions: [], };
-    }
-
-    return {
-      reactions: statblock.reactions || [],
-      legendaryActions: getLegendaryActionsArray(statblock),
-    };
-  };
+    return Object.values(groups);
+  }, [otherCombatants, statblocks]);
 
   return (
     <div className={`${styles.abilitiesCard} ${expanded ? '' : styles.collapsed} ${collapsed ? styles.sidebarCollapsed : ''}`}>
@@ -80,72 +74,136 @@ export function ReactiveAbilitiesCard({  sidebarCollapsed }) {
         </div>
       </div>
 
-        {expanded && (
-          <div className={styles.cardContent}>
-            {otherCombatants.map((combatant) => {
-              const { reactions, legendaryActions } = getCombatantAbilities(combatant);
+      {expanded && (
+        <div className={styles.cardContent}>
+          {groupedByStatblock.map((group) => {
+            const combatantNames = group.combatants.map(c => c.name).join(', ');
+            const count = group.combatants.length;
 
-              // Skip if no reactions or legendary actions
-              if (reactions.length === 0 && legendaryActions.length === 0) {
-                return null;
-              }
+            // Skip groups with no abilities
+            if (group.defensiveTraits.length === 0 && group.reactions.length === 0 && group.legendaryActions.length === 0) {
+              return null;
+            }
 
-              return (
-                <div key={combatant.id} className={styles.combatantSection}>
-                  <h4 className={styles.combatantName}>{combatant.name}</h4>
+            return (
+              <div key={group.statblockId || group.combatants[0].id} className={styles.combatantSection}>
+                <h4 className={styles.combatantName}>
+                  {combatantNames} {count > 1 && <span className={styles.countBadge}>{count}</span>}
+                </h4>
 
-                  {/* Reactions Section */}
-                  {reactions.length > 0 && (
-                    <div className={styles.reactionsSection}>
-                      <h5>
-                        <Shield size={14} />
-                        Reactions
-                      </h5>
-                      <div className={styles.abilityList}>
-                        {reactions.map((reaction) => (
-                          <AbilityPreview
-                            key={reaction.id}
-                            ability={reaction}
-                          />
-                        ))}
-                      </div>
+                {/* Defensive Traits Section */}
+                {group.defensiveTraits.length > 0 && (
+                  <div>
+                    <h5 className={styles.defensiveSection}>
+                      <Shield size={14} />
+                      Defensive Traits
+                    </h5>
+                    <div className={styles.abilityList}>
+                      {group.defensiveTraits.map((action, idx) => (
+                        <AbilityPreview
+                          key={idx}
+                          ability={action}
+                        />
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Legendary Actions Section */}
-                  {legendaryActions.length > 0 && (
-                    <div className={styles.legendarySection}>
-                      <h5>
-                        <AlertTriangle size={14} />
-                        Legendary Actions
-                      </h5>
-                      <div className={styles.abilityList}>
-                        {legendaryActions.map((action) => (
-                          <AbilityPreview
-                            key={action.id}
-                            ability={action}
-                          />
-                        ))}
-                      </div>
+                {/* Reactions Section - merged by name */}
+                {group.reactions.length > 0 && (
+                  <div>
+                    <h5 className={styles.reactionsSection}>
+                      <Shield size={14} />
+                      Reactions
+                    </h5>
+                    <div className={styles.abilityList}>
+                      {group.reactions.map((reaction, idx) => (
+                        <AbilityPreview
+                          key={idx}
+                          ability={reaction}
+                        />
+                      ))}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                )}
 
-            {otherCombatants.every(c => {
-              const statblock = c.statblockId
-                ? statblocks.find(s => s.id === c.statblockId)
-                : null;
-              const legendaryActions = statblock ? getLegendaryActionsArray(statblock) : [];
-              return !statblock?.reactions?.length && !legendaryActions.length;
-            }) && (
-              <div className={styles.noAbilities}>
-                <p>No reactions, legendary actions, or mythic actions available</p>
+                {/* Legendary Actions Section - editable counter */}
+                {group.legendaryActions.length > 0 && (
+                  <div className={styles.legendarySection}>
+                    {group.combatants.map(combatant => {
+                      const max = parseLegendaryMax(
+                        group.statblockId
+                          ? statblocks.find(s => s.id === combatant.statblockId)?.legendaryActions?.description
+                          : null
+                      );
+                      const used = legendaryActionsUsed[combatant.id] || 0;
+
+                      return (
+                        <div key={combatant.id} className={styles.legendaryItem}>
+                          <div className={styles.legendaryHeader}>
+                            <div className={styles.legendaryCounter}>
+                              <input
+                                className={styles.legendaryInputfield}
+                                type="number"
+                                min={0}
+                                max={max}
+                                value={used}
+                                onChange={(e) => setLegendaryActionsUsed(combatant.id, e.target.value)}
+                              />
+                              <span className={styles.counterValue}>/{max}</span>
+                            </div>
+                          </div>
+                          <div className={styles.abilityList}>
+                            {group.legendaryActions.map((action, idx) => (
+                              <AbilityPreview
+                                key={idx}
+                                ability={action}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Legendary Resistance Section - editable input */}
+                {group.legendaryResistance && (
+                  <div className={styles.legendarySection}>
+                    {group.combatants.map(combatant => {
+                      const used = legendaryResistanceUsed[combatant.id] || 0;
+
+                      return (
+                        <div key={combatant.id} className={styles.legendaryItem}>
+                          <div className={styles.legendaryHeader}>
+                            <span className={styles.legendaryLabel}>Legendary Resistance</span>
+                            <div className={styles.legendaryCounter}>
+                              <input
+                                className={styles.legendaryInputfield}
+                                type="number"
+                                min={0}
+                                value={used}
+                                onChange={(e) => setLegendaryResistanceUsed(combatant.id, e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <AbilityPreview ability={group.legendaryResistance} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            );
+          })}
+
+          {groupedByStatblock.length === 0 && (
+            <div className={styles.noAbilities}>
+              <p>No defensive traits, reactions, or legendary actions available</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

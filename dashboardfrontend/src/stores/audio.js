@@ -185,11 +185,11 @@ const audioApiService = {
     return playlistApiService.delete(id)
   },
   
-  async uploadTrack(file, name, isPlaylist = false) {
+  async uploadTrack(file, name, category = 'sfx') {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('name', name)
-    formData.append('isPlaylist', isPlaylist.toString())
+    formData.append('category', category)
     
     // Use apiService.post - axios automatically handles FormData with correct Content-Type
     return apiService.post('/v1/audio/upload', formData)
@@ -206,6 +206,7 @@ export const useAudioStore = create(
       currentTrackId: null,
       currentPlaylistId: null,
       queue: [],
+      originalQueue: [],
       queuePosition: 0,
       trackDuration: 0,
       trackProgress: 0,
@@ -240,7 +241,7 @@ export const useAudioStore = create(
               const localTrack = {
                 id: backendTrack.id,
                 name: backendTrack.name,
-                type: backendTrack.isPlaylist ? 'playlist' : 'sfx',
+                type: backendTrack.category || existsLocally?.type || 'sfx',
                 category: backendTrack.category || 'sfx',
                 duration: backendTrack.durationSeconds || 0,
                 blob: null,
@@ -264,6 +265,14 @@ export const useAudioStore = create(
               get().downloadAudioTrack(backendTrack.id).catch(err => {
                 console.warn(`Failed to download track ${backendTrack.id}:`, err)
               })
+            }
+          }
+          
+          // Clean up stale local-only tracks (no blob, no backend match)
+          const backendIds = new Set(backendTracks.map(t => t.id))
+          for (const local of localTracks) {
+            if (!local.blob && !backendIds.has(local.id)) {
+              await db.audioTracks.delete(local.id)
             }
           }
           
@@ -305,7 +314,7 @@ export const useAudioStore = create(
             }
             
             const unsyncedLocal = localPlaylists.find(p => 
-              !p.backendData && p.name === backendPlaylist.name
+              !p.backendData && (p._localId === backendPlaylist.id || p.name === backendPlaylist.name)
             )
             
             if (unsyncedLocal) {
@@ -400,21 +409,12 @@ export const useAudioStore = create(
       // Download and cache audio track from backend
       downloadAudioTrack: async (trackId) => {
         try {
-          // Use apiService.get with responseType: 'blob' to get binary data
           const blob = await apiService.get(
             `/v1/audio/${trackId}/stream`,
             {},
             { responseType: 'blob' }
           )
           
-          // Cache the blob
-          await db.cache.put({
-            key: `audioBlob_${trackId}`,
-            blob,
-            expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year
-          })
-          
-          // Update the track in audioTracks
           const track = await db.audioTracks.get(trackId)
           if (track) {
             await db.audioTracks.update(trackId, { blob })
@@ -474,12 +474,16 @@ export const useAudioStore = create(
             const backendTrack = await audioApiService.uploadTrack(
               trackData.file,
               track.name,
-              track.type === 'playlist'
+              track.type
             )
             
             // Update local with backend data
             const updatedTrack = { ...track, ...backendTrack }
             await db.audioTracks.put(updatedTrack)
+            // Remove the old local-UUID record to prevent duplicates
+            if (backendTrack.id !== id) {
+              await db.audioTracks.delete(id)
+            }
             
             const tracks = await db.audioTracks.toArray()
             set({ audioTracks: tracks })
@@ -546,6 +550,7 @@ export const useAudioStore = create(
         const id = uuidv4()
         const playlist = {
           id,
+          _localId: id,
           name,
           description,
           trackIds: [],
@@ -564,8 +569,8 @@ export const useAudioStore = create(
             trackIds: []
           })
           
-          // Update local with backend data
-          const updatedPlaylist = { ...playlist, ...backendPlaylist }
+          // Update local with backend data, preserve _localId linking
+          const updatedPlaylist = { ...playlist, ...backendPlaylist, _localId: id }
           await db.playlists.delete(playlist.id)
           await db.playlists.put(updatedPlaylist)
           
@@ -817,6 +822,7 @@ export const useAudioStore = create(
           trackDuration: track.duration || 0,
           trackProgress: 0,
           queue,
+          originalQueue: queue,
           queuePosition: position,
           audioTracks: allTracks
         })
@@ -881,6 +887,7 @@ export const useAudioStore = create(
           trackDuration: firstTrack.duration || 0,
           trackProgress: 0,
           queue,
+          originalQueue: queue,
           queuePosition: 0,
           audioTracks: allTracks
         })
@@ -927,21 +934,37 @@ export const useAudioStore = create(
       },
 
       toggleShuffle: () => {
-        const { shuffle, queue } = get()
+        const { shuffle, queue, queuePosition, originalQueue } = get()
         const newShuffle = !shuffle
 
-        let newQueue = [...queue]
         if (newShuffle) {
-          const currentTrackId = queue[get().queuePosition]
-          const remaining = queue.slice(get().queuePosition + 1)
-          for (let i = remaining.length - 1; i > 0; i--) {
+          const currentTrackId = queue[queuePosition]
+          const before = queue.slice(0, queuePosition)
+          const after = queue.slice(queuePosition + 1)
+          const otherTracks = [...before, ...after]
+
+          for (let i = otherTracks.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1))
-            ;[remaining[i], remaining[j]] = [remaining[j], remaining[i]]
+            ;[otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]]
           }
-          newQueue = [currentTrackId, ...remaining]
+
+          const shuffledBefore = otherTracks.slice(0, before.length)
+          const shuffledAfter = otherTracks.slice(before.length)
+          const newQueue = [...shuffledBefore, currentTrackId, ...shuffledAfter]
+
+          set({ shuffle: newShuffle, queue: newQueue, originalQueue: queue })
+        } else {
+          const currentTrackId = queue[queuePosition]
+          const newPosition = originalQueue.indexOf(currentTrackId)
+
+          set({
+            shuffle: newShuffle,
+            queue: originalQueue.length ? originalQueue : queue,
+            queuePosition: newPosition >= 0 ? newPosition : 0,
+            originalQueue: []
+          })
         }
 
-        set({ shuffle: newShuffle, queue: newQueue })
         return newShuffle
       },
 
@@ -955,38 +978,28 @@ export const useAudioStore = create(
       },
 
       playNext: async () => {
-        const { queue, queuePosition, shuffle, repeat } = get()
+        let { queue, queuePosition, shuffle, repeat } = get()
 
         if (!queue.length) return
 
-        let nextPosition
+        let nextPosition = queuePosition + 1
 
-        if (shuffle) {
-          const availablePositions = queue
-            .map((id, idx) => ({ id, idx }))
-            .filter(item => item.id !== queue[queuePosition])
-
-          if (!availablePositions.length) {
-            if (repeat === 'all') {
-              nextPosition = 0
-            } else {
-              return
+        if (nextPosition >= queue.length) {
+          if (repeat === 'all') {
+            if (shuffle) {
+              const tracks = [...queue]
+              for (let i = tracks.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1))
+                ;[tracks[i], tracks[j]] = [tracks[j], tracks[i]]
+              }
+              set({ queue: tracks })
+              queue = tracks
             }
+            nextPosition = 0
+          } else if (repeat === 'one') {
+            nextPosition = queuePosition
           } else {
-            const random = availablePositions[Math.floor(Math.random() * availablePositions.length)]
-            nextPosition = random.idx
-          }
-        } else {
-          nextPosition = queuePosition + 1
-
-          if (nextPosition >= queue.length) {
-            if (repeat === 'all') {
-              nextPosition = 0
-            } else if (repeat === 'one') {
-              nextPosition = queuePosition
-            } else {
-              return
-            }
+            return
           }
         }
 
@@ -1120,7 +1133,7 @@ export const useAudioStore = create(
       },
 
       setQueue: (trackIds, startPosition = 0) => {
-        set({ queue: trackIds, queuePosition: startPosition })
+        set({ queue: trackIds, originalQueue: trackIds, queuePosition: startPosition })
       },
 
       clearQueue: () => {

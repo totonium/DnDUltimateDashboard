@@ -71,16 +71,6 @@ export function StatblockViewer({ statblock, onClose }) {
     return '30 ft.';
   };
 
-  const formatDamageLine = (label, items) => {
-    if (!items || items.length === 0) return null;
-    return (
-      <div className="damage-line">
-        <strong>{label}: </strong>
-        {items.join(', ')}
-      </div>
-    );
-  };
-
   return (
     <div className="statblock-viewer-overlay" onClick={onClose}>
       <div className="statblock-viewer" onClick={e => e.stopPropagation()}>
@@ -265,25 +255,19 @@ export function StatblockViewer({ statblock, onClose }) {
           </Section>
         )}
 
-        {(statblock.legendaryActions?.length > 0 || statblock.legendaryActions?.description) && (
+        {(statblock.legendaryActions?.actions?.length > 0 || statblock.legendaryActions?.description) && (
           <Section
             title="Legendary Actions"
             icon="👑"
             expanded={expandedSections.legendary}
             onToggle={() => toggleSection('legendary')}
           >
-            {typeof statblock.legendaryActions[0] === 'string' ? (
-              <p className="legendary-description">{parseTextToElements(statblock.legendaryActions[0])}</p>
-            ) : (
-              <>
-                {statblock.legendaryActions?.description && (
-                  <p className="legendary-description">{parseTextToElements(statblock.legendaryActions.description)}</p>
-                )}
-                {statblock.legendaryActions.actions?.map((action, i) => (
-                  <AbilityContent key={i} ability={action} />
-                ))}
-              </>
+            {statblock.legendaryActions?.description && (
+              <p className="legendary-description">{parseTextToElements(statblock.legendaryActions.description)}</p>
             )}
+            {statblock.legendaryActions?.actions?.map((action, i) => (
+              <AbilityContent key={i} ability={action} />
+            ))}
           </Section>
         )}
 

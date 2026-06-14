@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 public record UpdateAudioRequest(
         @NotBlank(message = "Name is required")
         String name,
-        @Nullable Long durationSeconds
+        @Nullable Long durationSeconds,
+        @Nullable String category
 ) {
 }

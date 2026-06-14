@@ -23,7 +23,7 @@ export function UploadAudioModal({ onClose, onUploadComplete }) {
   const [files, setFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({})
   const [uploadErrors, setUploadErrors] = useState({})
-  const [category, setCategory] = useState('sfx')
+  const [category, setCategory] = useState('music')
   const [previewTrack, setPreviewTrack] = useState(null)
 
   const { addAudioTrack, loadAudioTracks } = useAudioStore()
@@ -110,7 +110,7 @@ export function UploadAudioModal({ onClose, onUploadComplete }) {
         [file.name]: [`Failed to process file: ${error.message}`]
       }))
     }
-  }, [category, addAudioTrack, loadAudioTracks, validateFile])
+  }, [validateFile, category, addAudioTrack, loadAudioTracks, onUploadComplete])
 
   const readFileAsArrayBuffer = (file) => {
     return new Promise((resolve, reject) => {
@@ -248,6 +248,14 @@ export function UploadAudioModal({ onClose, onUploadComplete }) {
           <div className="form-group">
             <label>Category</label>
             <div className="category-buttons">
+                            <button
+                type="button"
+                className={`category-btn ${category === 'music' ? 'active' : ''}`}
+                onClick={() => setCategory('music')}
+              >
+                <Music size={16} />
+                Music
+              </button>
               <button
                 type="button"
                 className={`category-btn ${category === 'sfx' ? 'active' : ''}`}
@@ -255,14 +263,6 @@ export function UploadAudioModal({ onClose, onUploadComplete }) {
               >
                 <Volume2 size={16} />
                 Sound Effects
-              </button>
-              <button
-                type="button"
-                className={`category-btn ${category === 'music' ? 'active' : ''}`}
-                onClick={() => setCategory('music')}
-              >
-                <Music size={16} />
-                Music
               </button>
               <button
                 type="button"

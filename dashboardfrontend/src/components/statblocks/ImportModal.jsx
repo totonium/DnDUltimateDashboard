@@ -11,6 +11,42 @@ import { useStatblockStore } from '../../stores/statblocks';
 import { parseMonsterFile } from '../../services/monsterParser.jsx';
 import './ImportModal.css';
 
+// Normalize data to { field1, field2 } format
+// Used for legendaryActions, lairActions, etc.
+function normalizeToObjectFormat(data, arrayKey) {
+  if (!data) return null;
+  if (Array.isArray(data)) return { [arrayKey]: data };
+  if (typeof data === 'object' && data !== null) {
+    // Already in correct format or has the array inside
+    if (data[arrayKey]) return data;
+    // It's an object but missing the array key, wrap it
+    return { [arrayKey]: [], ...data };
+  }
+  return null;
+}
+
+function validateStatblock(data) {
+  // Basic validation - ensure required fields exist
+  const required = ['name', 'ac', 'hp'];
+  const missing = required.filter(field => !data[field]);
+
+  // Normalize legendaryActions to { description, actions } format
+  const normalized = {
+    ...data,
+    legendaryActions: normalizeToObjectFormat(data.legendaryActions, 'actions'),
+    lairActions: normalizeToObjectFormat(data.lairActions, 'description'),
+    mythicTrait: normalizeToObjectFormat(data.mythicTrait, 'description'),
+    mythicActions: Array.isArray(data.mythicActions) ? data.mythicActions : [],
+    regionalEffects: normalizeToObjectFormat(data.regionalEffects, 'description')
+  };
+
+  return {
+    ...normalized,
+    _valid: missing.length === 0,
+    _missingFields: missing
+  };
+}
+
 /**
  * ImportModal - Import statblocks from JSON files
  */
@@ -230,17 +266,6 @@ export function ImportModal({ onClose }) {
     }
   }, [processFiles]);
 
-  const validateStatblock = (data) => {
-    // Basic validation - ensure required fields exist
-    const required = ['name', 'ac', 'hp'];
-    const missing = required.filter(field => !data[field]);
-
-    return {
-      ...data,
-      _valid: missing.length === 0,
-      _missingFields: missing
-    };
-  };
 
   const handleImport = async () => {
     if (!parsedData) return;

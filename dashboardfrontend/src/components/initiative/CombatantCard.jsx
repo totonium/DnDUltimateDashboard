@@ -5,10 +5,12 @@
  * @module components/initiative/CombatantCard
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useInitiativeStore } from '../../stores/initiative';
 import { useStatblockStore } from '../../stores/statblocks';
-import { Shield, Sword, Eye, EyeOff, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Shield, Sword, Eye, EyeOff, ChevronDown, ChevronUp, Zap, Castle } from 'lucide-react';
+import { parseTextToElements } from '../../services/monsterParser';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { StatblockViewer } from '../statblocks/StatblockViewer';
 import './CombatantCard.css';
@@ -92,7 +94,7 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
 
   return (
     <div
-      className={`combatant-card ${isActiveTurn ? 'active-turn' : ''} ${isSelected ? 'selected' : ''} ${hpStatus}`}
+      className={`combatant-card ${isActiveTurn ? 'active-turn' : ''} ${isSelected ? 'selected' : ''} ${hpStatus} ${combatant.isEnvironment ? 'environment' : ''}`}
     >
       <div className="card-main">
         {/* Initiative Score */}
@@ -124,6 +126,7 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
         <div className="combatant-info">
           <div className="combatant-header">
             <h3 className="combatant-name">
+              {combatant.isEnvironment && <Castle size={14} className="environment-icon" />}
               {combatant.name}
             </h3>
             <div className="combatant-badges">
@@ -207,51 +210,61 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
         </div>
       </div>
 
-      {/* Expanded Details */}
-      {expanded && (
-        <div className="card-details">
-          {/* Status Effects */}
-          {combatant.statusEffects?.length > 0 && (
-            <div className="status-effects">
-              <h4>Status Effects</h4>
-              <div className="effect-list">
-                {combatant.statusEffects.map((effect, index) => (
-                  <span
-                    key={index}
-                    className="effect-tag"
-                    onClick={() => handleStatusEffectClick(effect)}
-                  >
-                    {effect.name}
-                    {effect.duration && ` (${effect.duration})`}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Expanded Details */}
+       {expanded && (
+         <div className="card-details">
+           {/* Environment Action Description */}
+           {combatant.isEnvironment && combatant.specialActionDescription && (
+             <div className="environment-action">
+               <h4><Castle size={14} /> Environment Actions</h4>
+               <div className="action-description">
+                 {parseTextToElements(combatant.specialActionDescription)}
+               </div>
+             </div>
+           )}
 
-          {/* Ability Usage */}
-          {combatant.usedAbilities?.length > 0 && (
-            <div className="used-abilities">
-              <h4>
-                <Zap size={14} /> Used Abilities
-              </h4>
-              <div className="used-list">
-                {combatant.usedAbilities.map((ability, index) => (
-                  <span key={index} className="used-ability">
-                    {ability}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+           {/* Status Effects */}
+           {combatant.statusEffects?.length > 0 && (
+             <div className="status-effects">
+               <h4>Status Effects</h4>
+               <div className="effect-list">
+                 {combatant.statusEffects.map((effect, index) => (
+                   <span
+                     key={index}
+                     className="effect-tag"
+                     onClick={() => handleStatusEffectClick(effect)}
+                   >
+                     {effect.name}
+                     {effect.duration && ` (${effect.duration})`}
+                   </span>
+                 ))}
+               </div>
+             </div>
+           )}
 
-          {/* Notes */}
-          {combatant.notes && (
-            <div className="combatant-notes">
-              <h4>Notes</h4>
-              <p>{combatant.notes}</p>
-            </div>
-          )}
+           {/* Ability Usage */}
+           {combatant.usedAbilities?.length > 0 && (
+             <div className="used-abilities">
+               <h4>
+                 <Zap size={14} /> Used Abilities
+               </h4>
+               <div className="used-list">
+                 {combatant.usedAbilities.map((ability, index) => (
+                   <span key={index} className="used-ability">
+                     {ability}
+                   </span>
+                 ))}
+               </div>
+             </div>
+           )}
+
+           {/* Notes */}
+           {combatant.notes && (
+             <div className="combatant-notes">
+               <h4>Notes</h4>
+               <p>{combatant.notes}</p>
+             </div>
+           )}
 
           {/* Quick Actions */}
           <div className="quick-actions">
@@ -276,24 +289,28 @@ export function CombatantCard({ combatant, isActiveTurn, onOpenDamageModal }) {
         </div>
       )}
 
-      {/* Confirm Remove Modal */}
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleConfirmRemove}
-        title="Remove Combatant"
-        message={`Remove ${combatant.name} from the encounter?`}
-        confirmText="Remove"
-        cancelText="Cancel"
-      />
+       {/* Confirm Remove Modal - rendered via portal to avoid z-index/clipping issues */}
+       {showConfirmModal && createPortal(
+         <ConfirmModal
+           isOpen={showConfirmModal}
+           onClose={() => setShowConfirmModal(false)}
+           onConfirm={handleConfirmRemove}
+           title="Remove Combatant"
+           message={`Remove ${combatant.name} from the encounter?`}
+           confirmText="Remove"
+           cancelText="Cancel"
+         />,
+         document.body
+       )}
 
-      {/* Statblock Viewer Modal */}
-      {showStatblockViewer && linkedStatblock && (
-        <StatblockViewer
-          statblock={linkedStatblock}
-          onClose={handleCloseStatblockViewer}
-        />
-      )}
+       {/* Statblock Viewer Modal - rendered via portal to avoid z-index/clipping issues */}
+       {showStatblockViewer && linkedStatblock && createPortal(
+         <StatblockViewer
+           statblock={linkedStatblock}
+           onClose={handleCloseStatblockViewer}
+         />,
+         document.body
+       )}
     </div>
   );
 }

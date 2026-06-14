@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from '@tanstack/react-router'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -8,7 +8,8 @@ export function Layout() {
   const { theme } = useUIStore()
   const { init, isAuthenticated } = useAuthStore()
   const { syncStatblocks } = useStatblockStore()
-  const { syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists } = useAudioStore()
+  const { syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists, processSyncQueue } = useAudioStore()
+  const syncIntervalRef = useRef(null)
   const location = useLocation()
 
   const isLoginPage = location.pathname === '/login'
@@ -30,11 +31,21 @@ export function Layout() {
     if (isAuthenticated) {
       syncStatblocks()
       syncAudioTracks()
-      syncPlaylists()
+      syncPlaylists().then(() => processSyncQueue())
       loadAudioTracks()
       loadPlaylists()
+
+      syncIntervalRef.current = setInterval(() => {
+        processSyncQueue()
+      }, 60000)
     }
-  }, [isAuthenticated, syncStatblocks, syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists])
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+        syncIntervalRef.current = null
+      }
+    }
+  }, [isAuthenticated, syncStatblocks, syncAudioTracks, syncPlaylists, loadAudioTracks, loadPlaylists, processSyncQueue])
 
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden">
